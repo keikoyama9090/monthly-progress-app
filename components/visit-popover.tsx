@@ -18,6 +18,7 @@ type QuickSaveProps = {
 type EditProps = {
   clientId: string;
   children: React.ReactNode;
+  initialDate?: string;
   onSaved: (clientId: string, visitedOn: string) => void;
 };
 
@@ -67,9 +68,9 @@ export function VisitQuickSave({ clientId, onSaved }: QuickSaveProps) {
 }
 
 /** バッジ（38日など）：タップで日付変更ポップオーバーを開く */
-export function VisitPopover({ clientId, children, onSaved }: EditProps) {
+export function VisitPopover({ clientId, children, initialDate, onSaved }: EditProps) {
   const today = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Tokyo" });
-  const [date, setDate] = useState(today);
+  const [date, setDate] = useState(initialDate ?? today);
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -85,12 +86,17 @@ export function VisitPopover({ clientId, children, onSaved }: EditProps) {
       return;
     }
     setOpen(false);
-    setDate(today);
     onSaved(clientId, date);
   };
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover
+      open={open}
+      onOpenChange={(o) => {
+        setOpen(o);
+        if (o) setDate(initialDate ?? today);
+      }}
+    >
       <PopoverTrigger
         className="cursor-pointer focus:outline-none"
         onClick={(e) => e.stopPropagation()}

@@ -7,6 +7,7 @@ import type { Client, MonthlyTask } from "@/lib/types";
 import {
   getDaysElapsed,
   getVisitStatus,
+  formatVisitDate,
 } from "@/lib/visit-utils";
 import { VisitPopover, VisitQuickSave } from "./visit-popover";
 import {
@@ -162,9 +163,11 @@ function VisitCell({
     status === "warn"   ? "text-amber-600" :
     "text-muted-foreground";
 
+  const formattedDate = formatVisitDate(latestVisit);
+
   return (
-    <div className="flex flex-col gap-1 w-full px-2">
-      <VisitPopover clientId={clientId} onSaved={onSaved}>
+    <div className="flex flex-col gap-0.5 w-full px-1.5">
+      <VisitPopover clientId={clientId} initialDate={latestVisit} onSaved={onSaved}>
         <div className="relative h-1 bg-muted/60 rounded-full overflow-visible w-full cursor-pointer">
           <div
             className={cn("absolute left-0 top-0 h-full rounded-full transition-all", barColor)}
@@ -175,11 +178,22 @@ function VisitCell({
         </div>
       </VisitPopover>
       <div className="flex items-center justify-center gap-1">
-        <span className={cn("text-xs font-medium tabular-nums", textColor)}>
-          {days}日経過
-        </span>
+        <VisitPopover clientId={clientId} initialDate={latestVisit} onSaved={onSaved}>
+          <span className={cn("text-xs font-medium tabular-nums whitespace-nowrap cursor-pointer", textColor)}>
+            {days}日経過
+          </span>
+        </VisitPopover>
         <VisitQuickSave clientId={clientId} onSaved={onSaved} />
       </div>
+      {formattedDate && (
+        <VisitPopover clientId={clientId} initialDate={latestVisit} onSaved={onSaved}>
+          <div className="flex justify-center cursor-pointer">
+            <span className="text-[10px] text-muted-foreground/60 tabular-nums whitespace-nowrap">
+              {formattedDate}に記録
+            </span>
+          </div>
+        </VisitPopover>
+      )}
     </div>
   );
 }

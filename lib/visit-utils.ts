@@ -10,6 +10,12 @@ export function getDaysElapsed(visitedOn: string | undefined): number | null {
   return Math.floor((todayMs - visitMs) / (1000 * 60 * 60 * 24));
 }
 
+export function formatVisitDate(visitedOn: string | undefined): string | null {
+  if (!visitedOn) return null;
+  const [, m, d] = visitedOn.split("-").map(Number);
+  return `${m}/${d}`;
+}
+
 export type VisitStatus = 'danger' | 'warn' | 'ok' | 'none';
 
 export function getVisitStatus(days: number | null): VisitStatus {
