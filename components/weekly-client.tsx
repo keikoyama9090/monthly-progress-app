@@ -180,7 +180,7 @@ export function WeeklyClient({ clients, tasks, year, month }: Props) {
       groups.set(item.client.id, arr);
     }
     // sort_order 順に並べ替え
-    return [...groups.entries()].sort(
+    return Array.from(groups.entries()).sort(
       ([, a], [, b]) => a[0].client.sort_order - b[0].client.sort_order
     );
   };
