@@ -269,9 +269,16 @@ export function GanttTable({
               </td>
               <td className="sticky left-0 z-10 bg-inherit border-r border-border px-3 py-0">
                 <Tooltip>
-                  <TooltipTrigger className="flex items-center gap-2 truncate max-w-[148px] text-sm text-foreground cursor-default py-2 focus:outline-none text-left w-full">
-                    <Building2 className="size-4 text-muted-foreground/50 shrink-0" />
-                    {client.name}
+                  <TooltipTrigger className="flex items-start gap-2 py-2 focus:outline-none text-left w-full cursor-default">
+                    <Building2 className="size-4 text-muted-foreground/50 shrink-0 mt-0.5" />
+                    <div className="flex flex-col min-w-0 flex-1">
+                      <span className="truncate text-sm text-foreground">{client.name}</span>
+                      {client.report_day != null && (
+                        <span className="text-[10px] text-muted-foreground/70 tabular-nums">
+                          毎月{client.report_day}日まで
+                        </span>
+                      )}
+                    </div>
                   </TooltipTrigger>
                   <TooltipContent side="right" className="flex flex-col gap-1 text-xs">
                     <p className="font-semibold">{client.name}</p>
