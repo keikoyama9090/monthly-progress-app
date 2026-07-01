@@ -1,36 +1,89 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 月次進捗管理アプリ
 
-## Getting Started
+税理士事務所向けの月次業務進捗管理Webアプリ。  
+33社のクライアントに対して、月次タスクの完了状況と訪問履歴を管理します。
 
-First, run the development server:
+## 技術スタック
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- **Next.js 14** (App Router)
+- **shadcn/ui** (@base-ui/react)
+- **Tailwind CSS v3**
+- **Supabase**（DB）
+- **TypeScript**
+
+---
+
+## セットアップ手順
+
+### 1. Supabaseプロジェクト作成
+
+[https://supabase.com](https://supabase.com) でプロジェクトを作成してください。
+
+### 2. テーブル作成
+
+Supabase の SQL Editor で `supabase/schema.sql` を実行してください。
+
+### 3. シードデータ投入
+
+動作確認用（5社）：
+```sql
+-- supabase/seed.sql を実行
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+本番用（33社）：
+```sql
+-- supabase/seed_33clients.sql を実行
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 4. 環境変数設定
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+`.env.local` を編集して Supabase の接続情報を設定してください：
 
-## Learn More
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
 
-To learn more about Next.js, take a look at the following resources:
+Supabase Dashboard → Project Settings → API から取得できます。
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### 5. 開発サーバー起動
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+npm install
+npm run dev
+```
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 機能一覧
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### ガントテーブル
+- 1〜12月の月別タスク完了状況を一覧表示
+- 当月列は薄い青背景で強調
+- セルの色：全完了（緑）/ 一部完了（X/Y、アンバー）/ 未着手（グレー）
+
+### 右スライドパネル（月セルクリックで開く）
+- タスクのチェックオン/オフ（monthly_tasks への upsert）
+- 担当者バッジ切替：K → C → なし → K
+- 完了タスクへのメモ入力（800ms デバウンス）
+- 無効タスクのグレーアウト表示
+
+### 訪問日記録（訪問バッジクリックで開く）
+- 訪問バッジ：🔴 45日以上 / 🟡 30〜44日 / + 30日未満
+- 日付を選択して保存すると visits テーブルに記録
+
+### サマリーカード（3枚）
+- ⚠️ 訪問要確認：最終訪問から45日以上経過した会社数
+- 📋 今月未着手：当月タスクが1件も完了していない会社数
+- ✅ 今月完了：当月の有効タスクが全て完了している会社数
+
+---
+
+## Vercelデプロイ
+
+```bash
+# Vercel CLI でデプロイ
+npx vercel --prod
+```
+
+環境変数は Vercel Dashboard → Settings → Environment Variables に設定してください。
