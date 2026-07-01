@@ -25,10 +25,6 @@ type AssigneeTaskItem = {
 
 const ASSIGNEES: Assignee[] = ["K", "C"];
 
-const ASSIGNEE_COLORS: Record<string, string> = {
-  K: "bg-blue-50 border-blue-200 text-blue-800",
-  C: "bg-violet-50 border-violet-200 text-violet-800",
-};
 
 const ASSIGNEE_BADGE: Record<string, string> = {
   K: "bg-blue-100 text-blue-700",

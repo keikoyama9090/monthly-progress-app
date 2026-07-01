@@ -56,7 +56,6 @@ function GanttCell({
   const { completed, total } = getCellData(tasks, client);
   const ratio = total === 0 ? 0 : completed / total;
   const isComplete = total > 0 && completed === total;
-  const hasProgress = completed > 0 && !isComplete;
 
   const barColor =
     ratio === 0

@@ -33,7 +33,7 @@ export function WithholdingDetail({
   adjustment,
   onTaxUpdated,
   onAdjustmentUpdated,
-  onError,
+  onError: _onError,
 }: Props) {
   const taxMap: Record<number, WithholdingTax> = {};
   for (const t of taxes) taxMap[t.month] = t;

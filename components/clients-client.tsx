@@ -30,9 +30,6 @@ function withholdingLabel(type: Client["withholding_type"]) {
   return "未設定";
 }
 
-function fiscalLabel(month: number | null) {
-  return month != null ? `${month}月` : "未設定";
-}
 
 function reportLabel(day: number | null) {
   return day != null ? `${day}日` : "未設定";
