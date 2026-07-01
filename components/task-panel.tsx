@@ -41,7 +41,7 @@ function TaskRow({
   index: number;
   taskName: string;
   task: MonthlyTask | null;
-  assignee: string | null;
+  assignee: "K" | "C" | null;
   onToggle: (index: number) => void;
   onMemoChange: (index: number, value: string) => void;
 }) {
