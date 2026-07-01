@@ -13,7 +13,7 @@ type Props = {
   adjustment: YearEndAdjustment | undefined;
   onTaxUpdated: (t: WithholdingTax) => void;
   onAdjustmentUpdated: (a: YearEndAdjustment) => void;
-  onError: (msg: string) => void;
+  onError?: (msg: string) => void;
 };
 
 function fmt(n: number | null | undefined): string {
@@ -33,7 +33,6 @@ export function WithholdingDetail({
   adjustment,
   onTaxUpdated,
   onAdjustmentUpdated,
-  onError: _onError,
 }: Props) {
   const taxMap: Record<number, WithholdingTax> = {};
   for (const t of taxes) taxMap[t.month] = t;
