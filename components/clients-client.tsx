@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { Building2, ChevronRight } from "lucide-react";
+import { Building2, ChevronRight, Plus } from "lucide-react";
 import type { Client, Assignee } from "@/lib/types";
 import { TASKS } from "@/lib/constants";
 import { AssigneeBadge, cycleAssignee } from "@/components/ui/assignee-badge";
@@ -41,6 +41,25 @@ function entityLabel(type: Client["entity_type"]) {
   return null;
 }
 
+function emptyDraft(): Client {
+  return {
+    id: "",
+    name: "",
+    sort_order: 0,
+    enabled_tasks: [true, true, true, true, true],
+    task_assignees: [null, null, null, null, null],
+    withholding_assignee: null,
+    fiscal_month: null,
+    report_day: null,
+    withholding_type: null,
+    industry: null,
+    entity_type: null,
+    tax_agent: false,
+    no_visit: false,
+    created_at: "",
+  };
+}
+
 export function ClientsClient({ initialClients }: Props) {
   const [clients, setClients] = useState<Client[]>(
     [...initialClients].sort((a, b) => {
@@ -52,35 +71,83 @@ export function ClientsClient({ initialClients }: Props) {
   const [selected, setSelected] = useState<Client | null>(null);
   const [draft, setDraft] = useState<Client | null>(null);
   const [saving, setSaving] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const openPanel = useCallback((client: Client) => {
+    setIsCreating(false);
+    setConfirmDelete(false);
     setSelected(client);
     setDraft({ ...client });
+  }, []);
+
+  const openCreatePanel = useCallback(() => {
+    setIsCreating(true);
+    setConfirmDelete(false);
+    setSelected(emptyDraft());
+    setDraft(emptyDraft());
   }, []);
 
   const closePanel = useCallback(() => {
     setSelected(null);
     setDraft(null);
+    setIsCreating(false);
+    setConfirmDelete(false);
   }, []);
 
   const handleSave = useCallback(async () => {
-    if (!draft) return;
+    if (!draft || draft.name.trim().length === 0) return;
     setSaving(true);
     try {
-      const res = await apiFetch("/api/clients", {
-        method: "PATCH",
-        body: JSON.stringify(draft),
-      });
-      if (res.ok) {
-        setClients((prev) =>
-          prev.map((c) => (c.id === draft.id ? draft : c))
-        );
-        closePanel();
+      if (isCreating) {
+        const res = await apiFetch("/api/clients", {
+          method: "POST",
+          body: JSON.stringify(draft),
+        });
+        if (res.ok) {
+          const created = (await res.json()) as Client;
+          setClients((prev) =>
+            [...prev, created].sort((a, b) => {
+              const am = a.fiscal_month ?? 13;
+              const bm = b.fiscal_month ?? 13;
+              return am - bm;
+            })
+          );
+          closePanel();
+        }
+      } else {
+        const res = await apiFetch("/api/clients", {
+          method: "PATCH",
+          body: JSON.stringify(draft),
+        });
+        if (res.ok) {
+          setClients((prev) =>
+            prev.map((c) => (c.id === draft.id ? draft : c))
+          );
+          closePanel();
+        }
       }
     } finally {
       setSaving(false);
     }
-  }, [draft, closePanel]);
+  }, [draft, isCreating, closePanel]);
+
+  const handleDelete = useCallback(async () => {
+    if (!draft || isCreating) return;
+    setDeleting(true);
+    try {
+      const res = await apiFetch(`/api/clients?id=${encodeURIComponent(draft.id)}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        setClients((prev) => prev.filter((c) => c.id !== draft.id));
+        closePanel();
+      }
+    } finally {
+      setDeleting(false);
+    }
+  }, [draft, isCreating, closePanel]);
 
   const update = useCallback(<K extends keyof Client>(key: K, value: Client[K]) => {
     setDraft((prev) => prev ? { ...prev, [key]: value } : prev);
@@ -98,6 +165,12 @@ export function ClientsClient({ initialClients }: Props) {
       </header>
 
       <main className="max-w-screen-2xl mx-auto px-6 py-6">
+        <div className="flex justify-end mb-4">
+          <Button onClick={openCreatePanel} size="sm">
+            <Plus data-icon="inline-start" />
+            新規クライアント追加
+          </Button>
+        </div>
         <div className="rounded-xl border border-border shadow-sm bg-card overflow-hidden">
           <table className="w-full text-sm border-collapse">
             <thead>
@@ -218,8 +291,20 @@ export function ClientsClient({ initialClients }: Props) {
       {/* 編集スライドパネル */}
       <Sheet open={selected !== null} onOpenChange={(open) => { if (!open) closePanel(); }}>
         <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
-          <SheetHeader className="pb-0">
-            <SheetTitle className="text-base font-semibold">クライアント編集</SheetTitle>
+          <SheetHeader className="pb-0 flex-row items-center justify-between">
+            <SheetTitle className="text-base font-semibold">
+              {isCreating ? "新規クライアント追加" : "クライアント編集"}
+            </SheetTitle>
+            {!isCreating && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-destructive hover:bg-destructive/10"
+                onClick={() => setConfirmDelete(true)}
+              >
+                削除
+              </Button>
+            )}
           </SheetHeader>
 
           {draft && (
@@ -457,9 +542,40 @@ export function ClientsClient({ initialClients }: Props) {
                 </div>
               </div>
 
+              {/* 削除確認 */}
+              {confirmDelete && (
+                <div className="flex flex-col gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2.5">
+                  <p className="text-xs text-destructive">
+                    「{draft.name}」を削除します。この操作は取り消せません。
+                  </p>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => setConfirmDelete(false)}
+                      disabled={deleting}
+                    >
+                      キャンセル
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      className="flex-1"
+                      onClick={handleDelete}
+                      disabled={deleting}
+                    >
+                      {deleting ? "削除中..." : "削除する"}
+                    </Button>
+                  </div>
+                </div>
+              )}
+
               {/* 保存ボタン */}
-              <Button onClick={handleSave} disabled={saving} className="w-full">
-                {saving ? "保存中..." : "保存"}
+              <Button
+                onClick={handleSave}
+                disabled={saving || draft.name.trim().length === 0}
+                className="w-full"
+              >
+                {saving ? "保存中..." : isCreating ? "追加" : "保存"}
               </Button>
             </div>
           )}

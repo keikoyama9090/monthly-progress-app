@@ -17,18 +17,31 @@ export async function POST(request: NextRequest) {
   if (authError) return authError;
 
   const body = await request.json();
-  const { name } = body as { name: unknown };
+  const client = body as Partial<Client>;
+  const name = typeof client.name === "string" ? client.name.trim() : "";
 
-  if (typeof name !== "string" || name.trim().length === 0) {
+  if (name.length === 0) {
     return NextResponse.json({ error: "Invalid name" }, { status: 400 });
   }
 
   const maxOrderRows = await sql`SELECT COALESCE(MAX(sort_order), 0) AS max FROM clients`;
   const nextOrder = Number(maxOrderRows[0].max) + 1;
 
+  const enabledTasks = client.enabled_tasks ?? [true, true, true, true, true];
+  const taskAssignees = client.task_assignees ?? [null, null, null, null, null];
+
   const rows = await sql`
-    INSERT INTO clients (name, sort_order)
-    VALUES (${name.trim()}, ${nextOrder})
+    INSERT INTO clients (
+      name, sort_order, enabled_tasks, task_assignees, withholding_assignee,
+      fiscal_month, report_day, withholding_type, industry, entity_type,
+      tax_agent, no_visit
+    )
+    VALUES (
+      ${name}, ${nextOrder}, ${enabledTasks}, ${taskAssignees}, ${client.withholding_assignee ?? null},
+      ${client.fiscal_month ?? null}, ${client.report_day ?? null}, ${client.withholding_type ?? null},
+      ${client.industry ?? null}, ${client.entity_type ?? null},
+      ${client.tax_agent ?? false}, ${client.no_visit ?? false}
+    )
     RETURNING *
   `;
   return NextResponse.json(rows[0] as Client, { status: 201 });
