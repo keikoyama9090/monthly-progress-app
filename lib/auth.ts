@@ -14,10 +14,19 @@ export const authOptions: NextAuthOptions = {
   },
   callbacks: {
     async signIn({ user }) {
+      const email = user.email?.trim().toLowerCase();
+      if (!email) return false;
+
+      const allowedEmails = process.env.ALLOWED_EMAILS?.split(",")
+        .map((e) => e.trim().toLowerCase())
+        .filter(Boolean);
+      if (allowedEmails && allowedEmails.length > 0) {
+        return allowedEmails.includes(email);
+      }
+
       const allowedDomain = process.env.ALLOWED_EMAIL_DOMAIN?.trim().toLowerCase();
       if (!allowedDomain) return true;
-      const email = user.email?.trim().toLowerCase();
-      return email?.endsWith(`@${allowedDomain}`) ?? false;
+      return email.endsWith(`@${allowedDomain}`);
     },
     async session({ session }) {
       return session;
