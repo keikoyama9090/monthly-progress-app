@@ -1,4 +1,4 @@
-export type Assignee = 'K' | 'C' | null;
+export type Assignee = 'K' | 'C' | 'client' | null;
 
 export type Client = {
   id: string;

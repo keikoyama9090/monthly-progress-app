@@ -444,7 +444,13 @@ export function ClientsClient({ initialClients }: Props) {
                     }}
                   />
                   <span className="text-xs text-muted-foreground">
-                    {draft.withholding_assignee === "K" ? "K が担当" : draft.withholding_assignee === "C" ? "C が担当" : "未設定"}
+                    {draft.withholding_assignee === "K"
+                      ? "K が担当"
+                      : draft.withholding_assignee === "C"
+                      ? "C が担当"
+                      : draft.withholding_assignee === "client"
+                      ? "クライアント対応待ち"
+                      : "未設定"}
                   </span>
                 </div>
               </div>

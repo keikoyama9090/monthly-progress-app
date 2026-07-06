@@ -16,6 +16,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import type { Assignee } from "@/lib/types";
 
 type Props = {
   clients: Client[];
@@ -29,16 +30,24 @@ type Props = {
 function getCellData(
   tasks: MonthlyTask[],
   client: Client
-): { completed: number; total: number } {
+): { completed: number; total: number; nextAssignee: Assignee } {
   const enabledIndices = client.enabled_tasks
     .map((enabled, i) => (enabled ? i : -1))
     .filter((i) => i >= 0);
   const total = enabledIndices.length;
-  if (total === 0) return { completed: 0, total: 0 };
+  if (total === 0) return { completed: 0, total: 0, nextAssignee: null };
   const completed = tasks.filter(
     (t) => t.completed_at !== null && enabledIndices.includes(t.task_index)
   ).length;
-  return { completed, total };
+
+  // 未完了の最初のタスクの担当者 = このセルで次にアクションすべき人
+  const nextIndex = enabledIndices.find(
+    (i) => !tasks.some((t) => t.task_index === i && t.completed_at !== null)
+  );
+  const nextAssignee =
+    nextIndex !== undefined ? client.task_assignees?.[nextIndex] ?? null : null;
+
+  return { completed, total, nextAssignee };
 }
 
 function GanttCell({
@@ -54,22 +63,41 @@ function GanttCell({
   showNextIndicator: boolean;
   onClick: () => void;
 }) {
-  const { completed, total } = getCellData(tasks, client);
+  const { completed, total, nextAssignee } = getCellData(tasks, client);
   const ratio = total === 0 ? 0 : completed / total;
   const isComplete = total > 0 && completed === total;
 
-  const barColor =
-    ratio === 0
-      ? "bg-muted/0"
-      : ratio <= 0.25
-      ? "bg-foreground/10"
-      : ratio <= 0.5
-      ? "bg-foreground/18"
-      : ratio <= 0.75
-      ? "bg-foreground/25"
-      : isComplete
-      ? "bg-foreground/35"
-      : "bg-foreground/25";
+  // 次にアクションすべき人（K/C/クライアント）に応じてバーの色を変える。
+  // 未完了タスクに担当者が未設定のときはグレーのまま（従来の見た目）。
+  const assigneeBarColor =
+    nextAssignee === "K"
+      ? "bg-primary"
+      : nextAssignee === "C"
+      ? "bg-violet-400"
+      : nextAssignee === "client"
+      ? "bg-rose-400"
+      : "bg-foreground";
+
+  const barColor = isComplete
+    ? "bg-emerald-400"
+    : ratio === 0
+    ? "bg-muted/0"
+    : ratio <= 0.25
+    ? cn(assigneeBarColor, "opacity-30")
+    : ratio <= 0.5
+    ? cn(assigneeBarColor, "opacity-45")
+    : ratio <= 0.75
+    ? cn(assigneeBarColor, "opacity-60")
+    : cn(assigneeBarColor, "opacity-75");
+
+  const indicatorColor =
+    nextAssignee === "K"
+      ? "bg-primary/60"
+      : nextAssignee === "C"
+      ? "bg-violet-400/70"
+      : nextAssignee === "client"
+      ? "bg-rose-400/70"
+      : "bg-primary/50";
 
   return (
     <td className="p-0">
@@ -81,11 +109,11 @@ function GanttCell({
         )}
         onClick={onClick}
       >
-        {/* 前月完了済かつ当月未着手のとき：左端に細い強調ライン */}
+        {/* 前月完了済かつ当月未着手のとき：左端に細い強調ライン（次の担当者の色） */}
         {showNextIndicator && ratio === 0 && (
-          <div className="absolute left-0 top-1 bottom-1 w-0.5 rounded-full bg-primary/50" />
+          <div className={cn("absolute left-0 top-1 bottom-1 w-0.5 rounded-full", indicatorColor)} />
         )}
-        {/* 完了率に応じた縦バー（下から立ち上がる） */}
+        {/* 完了率に応じた縦バー（下から立ち上がる、次の担当者の色で着色） */}
         {ratio > 0 && (
           <div
             className={cn(
@@ -100,7 +128,7 @@ function GanttCell({
           <div className="absolute inset-0 flex items-center justify-center">
             <svg
               viewBox="0 0 12 12"
-              className="w-3 h-3 text-foreground/50 relative z-10"
+              className="w-3 h-3 text-emerald-800/60 relative z-10"
               fill="none"
               stroke="currentColor"
               strokeWidth="2.5"
@@ -221,7 +249,23 @@ export function GanttTable({
   }, [tasks]);
 
   return (
-    <div className="overflow-x-auto rounded-xl border border-border shadow-sm bg-card">
+    <div className="rounded-xl border border-border shadow-sm bg-card">
+      <div className="flex items-center gap-4 px-4 py-2 border-b border-border/60 text-[11px] text-muted-foreground">
+        <span className="font-semibold text-muted-foreground/70">次のアクション:</span>
+        <span className="inline-flex items-center gap-1.5">
+          <span className="size-2 rounded-full bg-primary" />K
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span className="size-2 rounded-full bg-violet-400" />C
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span className="size-2 rounded-full bg-rose-400" />クライアント
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span className="size-2 rounded-full bg-emerald-400" />完了
+        </span>
+      </div>
+      <div className="overflow-x-auto">
       <table className="border-collapse text-sm" style={{ minWidth: "900px" }}>
         <thead>
           <tr className="bg-muted/50 border-b border-border">
@@ -352,6 +396,7 @@ export function GanttTable({
           })}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }

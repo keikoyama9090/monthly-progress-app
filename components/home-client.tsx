@@ -1,12 +1,14 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import type { Client, MonthlyTask, SelectedCell } from "@/lib/types";
 import { GanttTable } from "@/components/gantt-table";
 import { TaskPanel } from "@/components/task-panel";
+import { BriefingPanel } from "@/components/briefing-panel";
 import { AppNav, AppLogo } from "@/components/app-nav";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
+import { buildBriefingItems } from "@/lib/briefing";
 
 type Props = {
   initialClients: Client[];
@@ -23,13 +25,16 @@ export function HomeClient({
   initialTasks,
   initialLatestVisits,
   currentYear,
-  currentMonth: _currentMonth, // eslint-disable-line @typescript-eslint/no-unused-vars
+  currentMonth,
 }: Props) {
   const [year, setYear] = useState(currentYear);
   const [clients] = useState<Client[]>(
     [...initialClients].sort((a, b) => (a.fiscal_month ?? 13) - (b.fiscal_month ?? 13))
   );
   const [tasks, setTasks] = useState<MonthlyTask[]>(initialTasks);
+  // 年度ナビゲーションで tasks が別の年に切り替わっても、
+  // ブリーフィングパネルは常に「今月」の実データを参照できるように別管理する
+  const [currentYearTasks, setCurrentYearTasks] = useState<MonthlyTask[]>(initialTasks);
   const [latestVisits, setLatestVisits] =
     useState<Record<string, string>>(initialLatestVisits);
 
@@ -108,7 +113,25 @@ export function HomeClient({
       );
       return [...next, updatedTask];
     });
-  }, []);
+    if (updatedTask.year === currentYear) {
+      setCurrentYearTasks((prev) => {
+        const next = prev.filter(
+          (t) => !(t.client_id === updatedTask.client_id && t.year === updatedTask.year && t.month === updatedTask.month && t.task_index === updatedTask.task_index)
+        );
+        return [...next, updatedTask];
+      });
+    }
+  }, [currentYear]);
+
+  const briefingItems = useMemo(
+    () =>
+      buildBriefingItems(
+        clients,
+        currentYearTasks.filter((t) => t.month === currentMonth),
+        latestVisits
+      ),
+    [clients, currentYearTasks, latestVisits, currentMonth]
+  );
 
   const selectedClient = selectedCell
     ? clients.find((c) => c.id === selectedCell.clientId) ?? null
@@ -161,6 +184,8 @@ export function HomeClient({
       </header>
 
       <main className="max-w-screen-2xl mx-auto px-6 py-6 space-y-6">
+        <BriefingPanel items={briefingItems} />
+
         {tasksLoading ? (
           <div className="flex items-center justify-center py-20 text-muted-foreground gap-2">
             <svg className="animate-spin size-4" viewBox="0 0 24 24" fill="none">

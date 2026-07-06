@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { TASKS } from "@/lib/constants";
-import type { Client, MonthlyTask } from "@/lib/types";
+import type { Assignee, Client, MonthlyTask } from "@/lib/types";
 import {
   getDaysElapsed,
   getVisitStatus,
@@ -41,7 +41,7 @@ function TaskRow({
   index: number;
   taskName: string;
   task: MonthlyTask | null;
-  assignee: "K" | "C" | null;
+  assignee: Assignee;
   onToggle: (index: number) => void;
   onMemoChange: (index: number, value: string) => void;
 }) {

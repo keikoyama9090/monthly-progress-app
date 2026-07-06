@@ -2,7 +2,7 @@
 
 import { cn } from "@/lib/utils";
 
-type AssigneeValue = "K" | "C" | null;
+type AssigneeValue = "K" | "C" | "client" | null;
 
 type Props = {
   assignee: AssigneeValue;
@@ -35,15 +35,19 @@ export function AssigneeBadge({ assignee, onClick, disabled = false }: Props) {
   const colors =
     assignee === "K"
       ? "bg-primary/10 text-primary ring-1 ring-primary/30" + (disabled ? "" : " hover:bg-primary/20")
-      : "bg-violet-100 text-violet-700 ring-1 ring-violet-200" + (disabled ? "" : " hover:bg-violet-200");
+      : assignee === "C"
+      ? "bg-violet-100 text-violet-700 ring-1 ring-violet-200" + (disabled ? "" : " hover:bg-violet-200")
+      : "bg-rose-100 text-rose-700 ring-1 ring-rose-200" + (disabled ? "" : " hover:bg-rose-200");
+
+  const label = assignee === "client" ? "客" : assignee;
 
   return (
     <span onClick={disabled ? undefined : onClick} className={cn(base, interactive, colors)}>
-      {assignee}
+      {label}
     </span>
   );
 }
 
 export function cycleAssignee(current: AssigneeValue): AssigneeValue {
-  return current === null ? "K" : current === "K" ? "C" : null;
+  return current === null ? "K" : current === "K" ? "C" : current === "C" ? "client" : null;
 }
