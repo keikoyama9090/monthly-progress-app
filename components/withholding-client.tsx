@@ -4,7 +4,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { WithholdingTable } from "@/components/withholding-table";
-import { AppNav, AppLogo } from "@/components/app-nav";
+import { AppNav, AppLogo, UserMenu } from "@/components/app-nav";
 import type { Client, WithholdingTax, YearEndAdjustment } from "@/lib/types";
 
 type Props = {
@@ -121,6 +121,8 @@ export function WithholdingClient({
               <ChevronRight className="size-4" />
             </Button>
           </div>
+
+          <UserMenu />
         </div>
       </header>
 

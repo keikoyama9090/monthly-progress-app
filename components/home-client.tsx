@@ -5,7 +5,7 @@ import type { Client, MonthlyTask, SelectedCell } from "@/lib/types";
 import { GanttTable } from "@/components/gantt-table";
 import { TaskPanel } from "@/components/task-panel";
 import { BriefingPanel } from "@/components/briefing-panel";
-import { AppNav, AppLogo } from "@/components/app-nav";
+import { AppNav, AppLogo, UserMenu } from "@/components/app-nav";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { buildBriefingItems } from "@/lib/briefing";
@@ -180,6 +180,8 @@ export function HomeClient({
               <ChevronRight className="size-4" />
             </Button>
           </div>
+
+          <UserMenu />
         </div>
       </header>
 

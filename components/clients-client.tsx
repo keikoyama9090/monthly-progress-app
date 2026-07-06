@@ -5,7 +5,7 @@ import { Building2, ChevronRight } from "lucide-react";
 import type { Client, Assignee } from "@/lib/types";
 import { TASKS } from "@/lib/constants";
 import { AssigneeBadge, cycleAssignee } from "@/components/ui/assignee-badge";
-import { AppNav, AppLogo } from "@/components/app-nav";
+import { AppNav, AppLogo, UserMenu } from "@/components/app-nav";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -92,6 +92,8 @@ export function ClientsClient({ initialClients }: Props) {
         <div className="max-w-screen-2xl mx-auto px-6 py-0 flex items-stretch gap-6 h-12">
           <AppLogo />
           <AppNav active="clients" />
+          <div className="flex-1" />
+          <UserMenu />
         </div>
       </header>
 
