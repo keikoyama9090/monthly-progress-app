@@ -74,10 +74,12 @@ export function ClientsClient({ initialClients }: Props) {
   const [isCreating, setIsCreating] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const openPanel = useCallback((client: Client) => {
     setIsCreating(false);
     setConfirmDelete(false);
+    setError(null);
     setSelected(client);
     setDraft({ ...client });
   }, []);
@@ -85,6 +87,7 @@ export function ClientsClient({ initialClients }: Props) {
   const openCreatePanel = useCallback(() => {
     setIsCreating(true);
     setConfirmDelete(false);
+    setError(null);
     setSelected(emptyDraft());
     setDraft(emptyDraft());
   }, []);
@@ -94,11 +97,13 @@ export function ClientsClient({ initialClients }: Props) {
     setDraft(null);
     setIsCreating(false);
     setConfirmDelete(false);
+    setError(null);
   }, []);
 
   const handleSave = useCallback(async () => {
     if (!draft || draft.name.trim().length === 0) return;
     setSaving(true);
+    setError(null);
     try {
       if (isCreating) {
         const res = await apiFetch("/api/clients", {
@@ -115,6 +120,8 @@ export function ClientsClient({ initialClients }: Props) {
             })
           );
           closePanel();
+        } else {
+          setError(`保存に失敗しました(エラーコード: ${res.status})。再度ログインしてからお試しください。`);
         }
       } else {
         const res = await apiFetch("/api/clients", {
@@ -126,8 +133,12 @@ export function ClientsClient({ initialClients }: Props) {
             prev.map((c) => (c.id === draft.id ? draft : c))
           );
           closePanel();
+        } else {
+          setError(`保存に失敗しました(エラーコード: ${res.status})。再度ログインしてからお試しください。`);
         }
       }
+    } catch {
+      setError("通信エラーが発生しました。ネットワーク状態を確認してください。");
     } finally {
       setSaving(false);
     }
@@ -136,6 +147,7 @@ export function ClientsClient({ initialClients }: Props) {
   const handleDelete = useCallback(async () => {
     if (!draft || isCreating) return;
     setDeleting(true);
+    setError(null);
     try {
       const res = await apiFetch(`/api/clients?id=${encodeURIComponent(draft.id)}`, {
         method: "DELETE",
@@ -143,7 +155,11 @@ export function ClientsClient({ initialClients }: Props) {
       if (res.ok) {
         setClients((prev) => prev.filter((c) => c.id !== draft.id));
         closePanel();
+      } else {
+        setError(`削除に失敗しました(エラーコード: ${res.status})。再度ログインしてからお試しください。`);
       }
+    } catch {
+      setError("通信エラーが発生しました。ネットワーク状態を確認してください。");
     } finally {
       setDeleting(false);
     }
@@ -541,6 +557,13 @@ export function ClientsClient({ initialClients }: Props) {
                   </span>
                 </div>
               </div>
+
+              {/* エラー表示 */}
+              {error && (
+                <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2.5">
+                  <p className="text-xs text-destructive">{error}</p>
+                </div>
+              )}
 
               {/* 削除確認 */}
               {confirmDelete && (
