@@ -181,7 +181,10 @@ export function ClientsClient({ initialClients }: Props) {
       </header>
 
       <main className="max-w-screen-2xl mx-auto px-6 py-6">
-        <div className="flex justify-end mb-4">
+        <div className="flex items-center justify-between mb-4">
+          <span className="text-sm text-muted-foreground">
+            クライアント数: <span className="font-semibold text-foreground">{clients.length}</span>件
+          </span>
           <Button onClick={openCreatePanel} size="sm">
             <Plus data-icon="inline-start" />
             新規クライアント追加
