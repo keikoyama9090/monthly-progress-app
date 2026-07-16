@@ -1,12 +1,15 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import type { BriefingItem } from "@/lib/briefing";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type Props = {
   items: BriefingItem[];
 };
+
+const STORAGE_KEY = "briefingPanelExpanded";
 
 function priorityDotColor(priority: number) {
   if (priority === 1) return "bg-red-500";
@@ -15,23 +18,63 @@ function priorityDotColor(priority: number) {
   return "bg-slate-400";
 }
 
-export function BriefingPanel({ items }: Props) {
-  return (
-    <div className="rounded-xl border border-border bg-card shadow-sm">
-      <div className="flex items-center justify-between px-5 py-3 border-b border-border/60">
-        <h2 className="text-sm font-semibold text-foreground">📋 今日のブリーフィング</h2>
-        <span className="text-[11px] text-muted-foreground">
-          {items.length > 0 ? `${items.length}件` : "対応事項なし"}
-        </span>
-      </div>
+function buildSummaryText(items: BriefingItem[]) {
+  const deadlineCount = items.filter((item) => item.deadlineText).length;
+  const visitCount = items.filter((item) => item.visitText).length;
+  const memoCount = items.filter((item) => item.memoHighlight).length;
 
-      {items.length === 0 ? (
-        <div className="flex items-center gap-2 px-5 py-4 text-sm text-muted-foreground">
+  const parts: string[] = [];
+  if (deadlineCount > 0) parts.push(`期限${deadlineCount}件`);
+  if (visitCount > 0) parts.push(`訪問${visitCount}件`);
+  if (memoCount > 0) parts.push(`メモ${memoCount}件`);
+
+  return parts.length > 0 ? `（${parts.join("・")}）` : "";
+}
+
+export function BriefingPanel({ items }: Props) {
+  const [expanded, setExpanded] = useState(false);
+
+  useEffect(() => {
+    setExpanded(window.localStorage.getItem(STORAGE_KEY) === "true");
+  }, []);
+
+  const toggleExpanded = () => {
+    setExpanded((prev) => {
+      const next = !prev;
+      window.localStorage.setItem(STORAGE_KEY, String(next));
+      return next;
+    });
+  };
+
+  if (items.length === 0) {
+    return (
+      <div className="rounded-xl border border-border bg-card shadow-sm">
+        <div className="flex items-center gap-2 px-5 py-3 text-sm text-muted-foreground">
           <CheckCircle2 className="size-4 text-emerald-500" />
           本日、特に対応が必要な項目はありません。
         </div>
-      ) : (
-        <ul className="divide-y divide-border/60">
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-xl border border-border bg-card shadow-sm">
+      <button
+        type="button"
+        onClick={toggleExpanded}
+        className="flex w-full items-center justify-between px-5 py-3 text-left"
+      >
+        <h2 className="text-sm font-semibold text-foreground">
+          📋 本日の対応事項 {items.length}件
+          <span className="ml-1 font-normal text-muted-foreground">{buildSummaryText(items)}</span>
+        </h2>
+        <ChevronDown
+          className={cn("size-4 text-muted-foreground transition-transform", expanded && "rotate-180")}
+        />
+      </button>
+
+      {expanded && (
+        <ul className="divide-y divide-border/60 border-t border-border/60">
           {items.map((item) => (
             <li key={item.clientId} className="flex items-start gap-3 px-5 py-3">
               <span
