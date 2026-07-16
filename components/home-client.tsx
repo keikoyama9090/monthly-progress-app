@@ -8,14 +8,14 @@ import { BriefingPanel } from "@/components/briefing-panel";
 import { AppNav, AppLogo, UserMenu } from "@/components/app-nav";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
-import { buildBriefingItems } from "@/lib/briefing";
+import { buildBriefingItems, getTargetMonth } from "@/lib/briefing";
 
 type Props = {
   initialClients: Client[];
   initialTasks: MonthlyTask[];
+  initialTargetMonthTasks: MonthlyTask[];
   initialLatestVisits: Record<string, string>;
   currentYear: number;
-  currentMonth: number;
 };
 
 type Toast = { id: number; message: string };
@@ -23,18 +23,19 @@ type Toast = { id: number; message: string };
 export function HomeClient({
   initialClients,
   initialTasks,
+  initialTargetMonthTasks,
   initialLatestVisits,
   currentYear,
-  currentMonth,
 }: Props) {
   const [year, setYear] = useState(currentYear);
   const [clients] = useState<Client[]>(
     [...initialClients].sort((a, b) => (a.fiscal_month ?? 13) - (b.fiscal_month ?? 13))
   );
   const [tasks, setTasks] = useState<MonthlyTask[]>(initialTasks);
-  // 年度ナビゲーションで tasks が別の年に切り替わっても、
-  // ブリーフィングパネルは常に「今月」の実データを参照できるように別管理する
-  const [currentYearTasks, setCurrentYearTasks] = useState<MonthlyTask[]>(initialTasks);
+  // ブリーフィングパネルは「先月分（report_day までに終えるべき対象月）」の
+  // 実データを、年度ナビゲーションの影響を受けずに常に参照する
+  const [targetMonthTasks, setTargetMonthTasks] = useState<MonthlyTask[]>(initialTargetMonthTasks);
+  const targetMonth = useMemo(() => getTargetMonth(new Date()), []);
   const [latestVisits, setLatestVisits] =
     useState<Record<string, string>>(initialLatestVisits);
 
@@ -113,24 +114,19 @@ export function HomeClient({
       );
       return [...next, updatedTask];
     });
-    if (updatedTask.year === currentYear) {
-      setCurrentYearTasks((prev) => {
+    if (updatedTask.year === targetMonth.year && updatedTask.month === targetMonth.month) {
+      setTargetMonthTasks((prev) => {
         const next = prev.filter(
           (t) => !(t.client_id === updatedTask.client_id && t.year === updatedTask.year && t.month === updatedTask.month && t.task_index === updatedTask.task_index)
         );
         return [...next, updatedTask];
       });
     }
-  }, [currentYear]);
+  }, [targetMonth]);
 
   const briefingItems = useMemo(
-    () =>
-      buildBriefingItems(
-        clients,
-        currentYearTasks.filter((t) => t.month === currentMonth),
-        latestVisits
-      ),
-    [clients, currentYearTasks, latestVisits, currentMonth]
+    () => buildBriefingItems(clients, targetMonthTasks, latestVisits),
+    [clients, targetMonthTasks, latestVisits]
   );
 
   const selectedClient = selectedCell

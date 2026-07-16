@@ -10,17 +10,26 @@ export type BriefingItem = {
   priority: number;
 };
 
+// 経理業務は前月分の記帳・確認を翌月の report_day までに終える運用のため、
+// 進捗は「今月分」ではなく「先月分（対象月）」のタスク完了状況で判定する
+export function getTargetMonth(today: Date): { year: number; month: number } {
+  const todayJST = today.toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' });
+  const [ty, tm] = todayJST.split('-').map(Number);
+  return tm === 1 ? { year: ty - 1, month: 12 } : { year: ty, month: tm - 1 };
+}
+
 function buildDeadlineStatus(
   client: Client,
-  currentMonthTasks: MonthlyTask[],
-  today: Date
+  targetMonthTasks: MonthlyTask[],
+  today: Date,
+  targetMonth: number
 ): string | null {
   if (client.report_day == null) return null;
 
   const enabledCount = client.enabled_tasks.filter(Boolean).length;
   if (enabledCount === 0) return null;
 
-  const completedCount = currentMonthTasks.filter(
+  const completedCount = targetMonthTasks.filter(
     (t) => t.completed_at !== null && client.enabled_tasks[t.task_index]
   ).length;
   if (completedCount >= enabledCount) return null;
@@ -28,7 +37,7 @@ function buildDeadlineStatus(
   const todayJST = today.toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' });
   const todayDay = Number(todayJST.split('-')[2]);
   const remaining = client.report_day - todayDay;
-  const progress = `今月の進捗 ${completedCount}/${enabledCount}`;
+  const progress = `${targetMonth}月分の進捗 ${completedCount}/${enabledCount}`;
 
   if (remaining < 0) {
     return `⚠️ 期限を過ぎています（毎月${client.report_day}日）。${progress}`;
@@ -60,15 +69,16 @@ function getMemoHighlight(clientTasks: MonthlyTask[]): string | null {
 
 export function buildBriefingItems(
   clients: Client[],
-  currentMonthTasks: MonthlyTask[],
+  targetMonthTasks: MonthlyTask[],
   latestVisits: Record<string, string>,
   today: Date = new Date()
 ): BriefingItem[] {
   const items: BriefingItem[] = [];
+  const { month: targetMonth } = getTargetMonth(today);
 
   for (const client of clients) {
-    const clientTasks = currentMonthTasks.filter((t) => t.client_id === client.id);
-    const deadlineText = buildDeadlineStatus(client, clientTasks, today);
+    const clientTasks = targetMonthTasks.filter((t) => t.client_id === client.id);
+    const deadlineText = buildDeadlineStatus(client, clientTasks, today, targetMonth);
     const visitText = buildVisitStatus(client, latestVisits[client.id]);
     const memoHighlight = getMemoHighlight(clientTasks);
 

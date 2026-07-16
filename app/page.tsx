@@ -1,16 +1,18 @@
 import { HomeClient } from "@/components/home-client";
 import { sql } from "@/lib/db";
 import type { Client, MonthlyTask } from "@/lib/types";
+import { getTargetMonth } from "@/lib/briefing";
 
 export const dynamic = "force-dynamic";
 
 export default async function Page() {
   const currentYear = new Date().getFullYear();
-  const currentMonth = new Date().getMonth() + 1;
+  const targetMonth = getTargetMonth(new Date());
 
-  const [clientRows, taskRows, visitRows] = await Promise.all([
+  const [clientRows, taskRows, targetMonthTaskRows, visitRows] = await Promise.all([
     sql`SELECT * FROM clients ORDER BY sort_order ASC`,
     sql`SELECT * FROM monthly_tasks WHERE year = ${currentYear}`,
+    sql`SELECT * FROM monthly_tasks WHERE year = ${targetMonth.year} AND month = ${targetMonth.month}`,
     sql`
       SELECT client_id, MAX(visited_on)::text AS visited_on
       FROM visits
@@ -20,6 +22,7 @@ export default async function Page() {
 
   const clients = clientRows as Client[];
   const tasks = taskRows as MonthlyTask[];
+  const initialTargetMonthTasks = targetMonthTaskRows as MonthlyTask[];
   const latestVisits: Record<string, string> = {};
   for (const row of visitRows as { client_id: string; visited_on: string }[]) {
     latestVisits[row.client_id] = row.visited_on;
@@ -29,9 +32,9 @@ export default async function Page() {
     <HomeClient
       initialClients={clients}
       initialTasks={tasks}
+      initialTargetMonthTasks={initialTargetMonthTasks}
       initialLatestVisits={latestVisits}
       currentYear={currentYear}
-      currentMonth={currentMonth}
     />
   );
 }
