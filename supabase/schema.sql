@@ -115,6 +115,28 @@ create index if not exists idx_withholding_taxes_year on withholding_taxes(year)
 create index if not exists idx_withholding_taxes_year_client on withholding_taxes(year, client_id);
 create index if not exists idx_year_end_adjustments_year on year_end_adjustments(year);
 
+-- 源泉税代行の進捗管理テーブル（tax_agent = true のクライアントのみ対象）
+create table if not exists withholding_agent_tasks (
+  id uuid primary key default gen_random_uuid(),
+  client_id uuid references clients(id) on delete cascade,
+  year integer not null,
+  month integer not null check (month between 1 and 12),
+  completed_at timestamptz,
+  created_at timestamptz default now(),
+  unique(client_id, year, month)
+);
+
+alter table withholding_agent_tasks enable row level security;
+
+create policy "authenticated_domain" on withholding_agent_tasks
+  for all using (
+    auth.role() = 'authenticated' AND
+    auth.email() LIKE '%@' || current_setting('app.allowed_domain', true)
+  );
+
+create index if not exists idx_withholding_agent_tasks_year on withholding_agent_tasks(year);
+create index if not exists idx_withholding_agent_tasks_year_client on withholding_agent_tasks(year, client_id);
+
 -- 各クライアントの最新訪問日を返す RPC 関数
 create or replace function get_latest_visits()
 returns table(client_id uuid, visited_on date)

@@ -4,16 +4,17 @@ import { useSession, signOut } from "next-auth/react";
 import { LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type ActivePage = "home" | "clients" | "withholding";
+type ActivePage = "home" | "clients" | "withholding-agent" | "withholding";
 
 type Props = {
   active: ActivePage;
 };
 
 const NAV_LINKS = [
-  { key: "clients"     as const, href: "/clients",     label: "クライアント" },
-  { key: "home"        as const, href: "/",            label: "月次進捗" },
-  { key: "withholding" as const, href: "/withholding", label: "源泉税納付" },
+  { key: "clients"          as const, href: "/clients",           label: "クライアント" },
+  { key: "home"             as const, href: "/",                  label: "月次進捗" },
+  { key: "withholding-agent" as const, href: "/withholding-agent", label: "源泉代行" },
+  { key: "withholding"      as const, href: "/withholding",       label: "源泉税納付" },
 ];
 
 export function AppNav({ active }: Props) {

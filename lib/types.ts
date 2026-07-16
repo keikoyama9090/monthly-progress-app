@@ -53,6 +53,15 @@ export type WithholdingTax = {
   updated_at: string;
 };
 
+export type WithholdingAgentTask = {
+  id: string;
+  client_id: string;
+  year: number;
+  month: number;
+  completed_at: string | null;
+  created_at: string;
+};
+
 export type YearEndAdjustment = {
   id: string;
   client_id: string;
