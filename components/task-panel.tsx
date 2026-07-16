@@ -158,6 +158,7 @@ export function TaskPanel({
   onTasksUpdated,
 }: Props) {
   const [localTasks, setLocalTasks] = useState<MonthlyTask[]>(tasks);
+  const [completingAll, setCompletingAll] = useState(false);
   const memoTimers = useRef<Record<number, ReturnType<typeof setTimeout>>>({});
 
   useEffect(() => {
@@ -239,6 +240,17 @@ export function TaskPanel({
   const totalCount = enabledTaskIndices.length;
   const progressPct = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
+  const completeAll = async () => {
+    const incomplete = enabledTaskIndices.filter((i) => !getTask(i)?.completed_at);
+    if (incomplete.length === 0) return;
+    setCompletingAll(true);
+    try {
+      await Promise.all(incomplete.map((i) => upsertTask(i, { completed: true })));
+    } finally {
+      setCompletingAll(false);
+    }
+  };
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-[420px] sm:max-w-[420px] flex flex-col gap-0 p-0 bg-background">
@@ -310,9 +322,20 @@ export function TaskPanel({
 
         {/* タスクリスト */}
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-2">
-          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-3">
-            タスク
-          </h3>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">
+              タスク
+            </h3>
+            {completedCount < totalCount && (
+              <button
+                onClick={completeAll}
+                disabled={completingAll}
+                className="text-xs font-medium text-primary hover:underline disabled:opacity-50 disabled:no-underline"
+              >
+                {completingAll ? "完了処理中..." : "すべて完了"}
+              </button>
+            )}
+          </div>
 
           {enabledTaskIndices.length === 0 && (
             <p className="text-sm text-muted-foreground">有効なタスクがありません</p>
