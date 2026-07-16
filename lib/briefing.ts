@@ -51,15 +51,11 @@ function buildVisitStatus(client: Client, latestVisit: string | undefined): stri
   return null;
 }
 
-// AI連携（第2段階）に置き換える際は memo_highlights テーブルからの
-// clientId -> string | null な取得関数に差し替える想定
-const MOCK_MEMO_HIGHLIGHTS: Record<string, string> = {
-  '11111111-0000-4000-8000-000000000002': '先方から資料が届かず、月末までかかりそう',
-  '11111111-0000-4000-8000-000000000004': '経理担当者が変更、来月から連絡先が変わる予定',
-};
-
-function getMockMemoHighlight(clientId: string): string | null {
-  return MOCK_MEMO_HIGHLIGHTS[clientId] ?? null;
+function getMemoHighlight(clientTasks: MonthlyTask[]): string | null {
+  const withMemo = clientTasks
+    .filter((t) => t.memo != null && t.memo.trim().length > 0)
+    .sort((a, b) => a.task_index - b.task_index);
+  return withMemo[0]?.memo ?? null;
 }
 
 export function buildBriefingItems(
@@ -74,7 +70,7 @@ export function buildBriefingItems(
     const clientTasks = currentMonthTasks.filter((t) => t.client_id === client.id);
     const deadlineText = buildDeadlineStatus(client, clientTasks, today);
     const visitText = buildVisitStatus(client, latestVisits[client.id]);
-    const memoHighlight = getMockMemoHighlight(client.id);
+    const memoHighlight = getMemoHighlight(clientTasks);
 
     if (!deadlineText && !visitText && !memoHighlight) continue;
 
