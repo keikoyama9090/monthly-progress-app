@@ -16,18 +16,37 @@ type Props = {
   onError: (msg: string) => void;
 };
 
+// 特例（納期の特例）は 1〜6月分を7月に、7〜12月分を翌1月にまとめて納付するため、
+// チェック対象となるのは 1月・7月のみ
+const SPECIAL_ACTIVE_MONTHS = [1, 7];
+
+function isMonthActive(client: Client, month: number): boolean {
+  if (client.withholding_type !== "special") return true;
+  return SPECIAL_ACTIVE_MONTHS.includes(month);
+}
+
 function MonthCell({
   task,
   isCurrentMonth,
+  active,
   saving,
   onClick,
 }: {
   task: WithholdingAgentTask | undefined;
   isCurrentMonth: boolean;
+  active: boolean;
   saving: boolean;
   onClick: () => void;
 }) {
   const isDone = !!task?.completed_at;
+
+  if (!active) {
+    return (
+      <div className="w-12 h-9 flex items-center justify-center rounded text-xs bg-gray-100 text-gray-300 select-none">
+        ─
+      </div>
+    );
+  }
 
   return (
     <button
@@ -141,7 +160,17 @@ export function WithholdingAgentTable({
                 <td className="sticky left-0 z-10 bg-inherit border-r border-gray-200 px-2 py-2">
                   <div className="flex items-center gap-1.5 text-sm font-medium text-gray-800">
                     <Building2 className="size-4 text-muted-foreground/50 shrink-0" />
-                    <span className="truncate max-w-[120px]">{client.name}</span>
+                    <span className="truncate max-w-[92px]">{client.name}</span>
+                    {client.withholding_type && (
+                      <span className={cn(
+                        "text-[10px] font-medium rounded px-1 py-px leading-none shrink-0",
+                        client.withholding_type === "special"
+                          ? "bg-primary/10 text-primary"
+                          : "bg-muted text-muted-foreground"
+                      )}>
+                        {client.withholding_type === "special" ? "特例" : "原則"}
+                      </span>
+                    )}
                   </div>
                 </td>
 
@@ -154,6 +183,7 @@ export function WithholdingAgentTable({
                       <MonthCell
                         task={taskMap[key]}
                         isCurrentMonth={isCurrentMonth}
+                        active={isMonthActive(client, m)}
                         saving={savingKey === key}
                         onClick={() => toggleCell(client, m)}
                       />
@@ -186,6 +216,10 @@ export function WithholdingAgentTable({
         <div className="flex items-center gap-1.5">
           <div className="w-8 h-5 rounded bg-blue-50 border border-blue-200" />
           <span>当月(未対応)</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <div className="w-8 h-5 rounded bg-gray-100 text-gray-300 flex items-center justify-center text-[10px]">─</div>
+          <span>特例のため対象外(1月・7月のみチェック可)</span>
         </div>
       </div>
     </div>

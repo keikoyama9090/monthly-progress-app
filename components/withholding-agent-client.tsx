@@ -22,7 +22,12 @@ export function WithholdingAgentClient({
 }: Props) {
   const [year, setYear] = useState(currentYear);
   const [clients] = useState<Client[]>(
-    [...initialClients].sort((a, b) => (a.fiscal_month ?? 13) - (b.fiscal_month ?? 13))
+    // 原則を上、特例を下にまとめ、その中では決算月の昇順に並べる
+    [...initialClients].sort((a, b) => {
+      const groupDiff = (a.withholding_type === "special" ? 1 : 0) - (b.withholding_type === "special" ? 1 : 0);
+      if (groupDiff !== 0) return groupDiff;
+      return (a.fiscal_month ?? 13) - (b.fiscal_month ?? 13);
+    })
   );
   const [tasks, setTasks] = useState<WithholdingAgentTask[]>(initialTasks);
   const [loading, setLoading] = useState(false);
