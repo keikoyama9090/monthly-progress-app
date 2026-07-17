@@ -146,8 +146,8 @@ export function HomeClient({
     : null;
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="bg-card border-b border-border shadow-sm sticky top-0 z-20">
+    <div className="h-screen flex flex-col bg-background">
+      <header className="bg-card border-b border-border shadow-sm z-20 shrink-0">
         <div className="max-w-screen-2xl mx-auto px-6 py-0 flex items-stretch gap-6 h-12">
           <AppLogo />
           <AppNav active="home" />
@@ -181,9 +181,9 @@ export function HomeClient({
         </div>
       </header>
 
-      <main className="max-w-screen-2xl mx-auto px-6 py-6">
-        <div className="flex gap-6 items-start">
-          <div className="flex-1 min-w-0">
+      <main className="max-w-screen-2xl mx-auto px-6 py-6 flex-1 min-h-0 w-full overflow-hidden">
+        <div className="flex gap-6 h-full">
+          <div className="flex-1 min-w-0 h-full">
             {tasksLoading ? (
               <div className="flex items-center justify-center py-20 text-muted-foreground gap-2">
                 <svg className="animate-spin size-4" viewBox="0 0 24 24" fill="none">
@@ -206,7 +206,7 @@ export function HomeClient({
             )}
           </div>
 
-          <div className="w-80 shrink-0">
+          <div className="w-80 shrink-0 h-full overflow-y-auto">
             <BriefingPanel items={briefingItems} />
           </div>
         </div>

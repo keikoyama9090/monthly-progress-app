@@ -249,8 +249,8 @@ export function GanttTable({
   }, [tasks]);
 
   return (
-    <div className="rounded-xl border border-border shadow-sm bg-card">
-      <div className="flex items-center gap-4 px-4 py-2 border-b border-border/60 text-[11px] text-muted-foreground">
+    <div className="rounded-xl border border-border shadow-sm bg-card h-full flex flex-col">
+      <div className="flex items-center gap-4 px-4 py-2 border-b border-border/60 text-[11px] text-muted-foreground shrink-0">
         <span className="font-semibold text-muted-foreground/70">次のアクション:</span>
         <span className="inline-flex items-center gap-1.5">
           <span className="size-2 rounded-full bg-primary" />K
@@ -265,7 +265,7 @@ export function GanttTable({
           <span className="size-2 rounded-full bg-emerald-400" />完了
         </span>
       </div>
-      <div className="overflow-auto max-h-[calc(100vh-160px)]">
+      <div className="overflow-auto flex-1 min-h-0">
       <table className="border-collapse text-sm" style={{ minWidth: "900px" }}>
         <thead>
           <tr className="bg-muted/50 border-b border-border">

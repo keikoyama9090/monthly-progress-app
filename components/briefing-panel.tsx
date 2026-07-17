@@ -1,15 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import type { BriefingItem } from "@/lib/briefing";
-import { CheckCircle2, ChevronDown } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type Props = {
   items: BriefingItem[];
 };
-
-const STORAGE_KEY = "briefingPanelExpanded";
 
 function priorityDotColor(priority: number) {
   if (priority === 1) return "bg-red-500";
@@ -32,20 +29,6 @@ function buildSummaryText(items: BriefingItem[]) {
 }
 
 export function BriefingPanel({ items }: Props) {
-  const [expanded, setExpanded] = useState(false);
-
-  useEffect(() => {
-    setExpanded(window.localStorage.getItem(STORAGE_KEY) === "true");
-  }, []);
-
-  const toggleExpanded = () => {
-    setExpanded((prev) => {
-      const next = !prev;
-      window.localStorage.setItem(STORAGE_KEY, String(next));
-      return next;
-    });
-  };
-
   if (items.length === 0) {
     return (
       <div className="rounded-xl border border-border bg-card shadow-sm">
@@ -59,43 +42,34 @@ export function BriefingPanel({ items }: Props) {
 
   return (
     <div className="rounded-xl border border-border bg-card shadow-sm">
-      <button
-        type="button"
-        onClick={toggleExpanded}
-        className="flex w-full items-center justify-between px-5 py-3 text-left"
-      >
+      <div className="px-5 py-3 border-b border-border/60">
         <h2 className="text-sm font-semibold text-foreground">
           📋 本日の対応事項 {items.length}件
           <span className="ml-1 font-normal text-muted-foreground">{buildSummaryText(items)}</span>
         </h2>
-        <ChevronDown
-          className={cn("size-4 text-muted-foreground transition-transform", expanded && "rotate-180")}
-        />
-      </button>
+      </div>
 
-      {expanded && (
-        <ul className="divide-y divide-border/60 border-t border-border/60">
-          {items.map((item) => (
-            <li key={item.clientId} className="flex items-start gap-3 px-5 py-3">
-              <span
-                className={cn("mt-1.5 size-2 rounded-full shrink-0", priorityDotColor(item.priority))}
-              />
-              <div className="min-w-0 flex-1 space-y-0.5">
-                <p className="text-sm font-medium text-foreground">{item.clientName}</p>
-                {item.deadlineText && (
-                  <p className="text-xs text-muted-foreground">{item.deadlineText}</p>
-                )}
-                {item.visitText && (
-                  <p className="text-xs text-muted-foreground">{item.visitText}</p>
-                )}
-                {item.memoHighlight && (
-                  <p className="text-xs text-muted-foreground">📝 {item.memoHighlight}</p>
-                )}
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
+      <ul className="divide-y divide-border/60">
+        {items.map((item) => (
+          <li key={item.clientId} className="flex items-start gap-3 px-5 py-3">
+            <span
+              className={cn("mt-1.5 size-2 rounded-full shrink-0", priorityDotColor(item.priority))}
+            />
+            <div className="min-w-0 flex-1 space-y-0.5">
+              <p className="text-sm font-medium text-foreground">{item.clientName}</p>
+              {item.deadlineText && (
+                <p className="text-xs text-muted-foreground">{item.deadlineText}</p>
+              )}
+              {item.visitText && (
+                <p className="text-xs text-muted-foreground">{item.visitText}</p>
+              )}
+              {item.memoHighlight && (
+                <p className="text-xs text-muted-foreground">📝 {item.memoHighlight}</p>
+              )}
+            </div>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
