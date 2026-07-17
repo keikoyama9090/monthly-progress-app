@@ -269,13 +269,13 @@ export function GanttTable({
       <table className="border-collapse text-sm" style={{ minWidth: "900px" }}>
         <thead>
           <tr className="bg-muted/50 border-b border-border">
-            <th className="sticky top-[49px] z-20 bg-muted/50 text-center px-2 py-2.5 font-semibold text-muted-foreground text-xs uppercase tracking-wide border-r border-border/60 w-10 min-w-[40px]">
+            <th className="text-center px-2 py-2.5 font-semibold text-muted-foreground text-xs uppercase tracking-wide border-r border-border/60 w-10 min-w-[40px]">
               決算
             </th>
-            <th className="sticky top-[49px] left-0 z-30 bg-muted/50 text-left px-3 py-2.5 font-semibold text-muted-foreground text-xs uppercase tracking-wide border-r border-border w-40 min-w-[160px]">
+            <th className="sticky left-0 z-10 bg-muted/50 text-left px-3 py-2.5 font-semibold text-muted-foreground text-xs uppercase tracking-wide border-r border-border w-40 min-w-[160px]">
               会社名
             </th>
-            <th className="sticky top-[49px] left-40 z-30 bg-muted/50 text-center px-2 py-2.5 font-semibold text-muted-foreground text-xs uppercase tracking-wide border-r border-border w-24 min-w-[96px]">
+            <th className="sticky left-40 z-10 bg-muted/50 text-center px-2 py-2.5 font-semibold text-muted-foreground text-xs uppercase tracking-wide border-r border-border w-24 min-w-[96px]">
               訪問
             </th>
             {MONTHS.map((m) => {
@@ -284,10 +284,10 @@ export function GanttTable({
                 <th
                   key={m}
                   className={cn(
-                    "sticky top-[49px] z-20 text-center px-1 py-2.5 text-xs border-r border-border/60 w-14 min-w-[56px]",
+                    "text-center px-1 py-2.5 text-xs border-r border-border/60 w-14 min-w-[56px]",
                     isCurrent
                       ? "bg-primary/15 text-primary font-bold tracking-wide border-b-2 border-b-primary/60"
-                      : "bg-muted/50 text-muted-foreground font-semibold"
+                      : "text-muted-foreground font-semibold"
                   )}
                 >
                   {isCurrent ? (
