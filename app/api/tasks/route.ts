@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
   if (authError) return authError;
 
   const body = await request.json();
-  const { client_id, year, month, task_index, completed, memo } =
+  const { client_id, year, month, task_index, completed, memo, waiting } =
     body as Record<string, unknown>;
 
   if (typeof client_id !== "string" || !UUID_RE.test(client_id)) {
@@ -52,15 +52,21 @@ export async function POST(request: NextRequest) {
   if (memo !== null && memo !== undefined && (typeof memo !== "string" || memo.length > MEMO_MAX_LENGTH)) {
     return NextResponse.json({ error: "Invalid memo" }, { status: 400 });
   }
+  if (waiting !== undefined && typeof waiting !== "boolean") {
+    return NextResponse.json({ error: "Invalid waiting" }, { status: 400 });
+  }
 
   const completed_at = completed ? new Date().toISOString() : null;
   const memoVal = (memo as string | null | undefined) ?? null;
+  // 完了済みのタスクは資料待ちにできない
+  const waiting_since = !completed && waiting ? new Date().toISOString() : null;
 
   const rows = await sql`
-    INSERT INTO monthly_tasks (client_id, year, month, task_index, completed_at, memo)
-    VALUES (${client_id}, ${year as number}, ${month as number}, ${task_index as number}, ${completed_at}, ${memoVal})
+    INSERT INTO monthly_tasks (client_id, year, month, task_index, completed_at, waiting_since, memo)
+    VALUES (${client_id}, ${year as number}, ${month as number}, ${task_index as number}, ${completed_at}, ${waiting_since}, ${memoVal})
     ON CONFLICT (client_id, year, month, task_index) DO UPDATE SET
       completed_at = EXCLUDED.completed_at,
+      waiting_since = EXCLUDED.waiting_since,
       memo = EXCLUDED.memo
     RETURNING *
   `;

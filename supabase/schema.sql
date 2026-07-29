@@ -137,6 +137,28 @@ create policy "authenticated_domain" on withholding_agent_tasks
 create index if not exists idx_withholding_agent_tasks_year on withholding_agent_tasks(year);
 create index if not exists idx_withholding_agent_tasks_year_client on withholding_agent_tasks(year, client_id);
 
+-- monthly_tasks テーブルへの追加カラム（クライアントからの資料待ちステータス）
+alter table monthly_tasks
+  add column if not exists waiting_since timestamptz;
+
+-- 月次自由記載コメントテーブル（ステップ別ではなく月全体に対する1件のメモ）
+create table if not exists monthly_comments (
+  id uuid primary key default gen_random_uuid(),
+  client_id uuid references clients(id) on delete cascade,
+  year integer not null,
+  month integer not null check (month between 1 and 12),
+  comment text,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now(),
+  unique(client_id, year, month)
+);
+
+-- 注記: 本番DB（Neon）には auth スキーマが存在せず、他の全テーブルも
+-- RLS は無効（認可はアプリ層の NextAuth + INTERNAL_API_KEY で行っている）。
+-- monthly_comments もそれに合わせて RLS は有効化していない。
+
+create index if not exists idx_monthly_comments_year_client on monthly_comments(year, client_id);
+
 -- 各クライアントの最新訪問日を返す RPC 関数
 create or replace function get_latest_visits()
 returns table(client_id uuid, visited_on date)

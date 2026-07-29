@@ -24,8 +24,19 @@ export type MonthlyTask = {
   month: number;
   task_index: number;
   completed_at: string | null;
+  waiting_since: string | null;
   memo: string | null;
   created_at: string;
+};
+
+export type MonthlyComment = {
+  id: string;
+  client_id: string;
+  year: number;
+  month: number;
+  comment: string | null;
+  created_at: string;
+  updated_at: string;
 };
 
 export type Visit = {

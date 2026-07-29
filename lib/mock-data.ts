@@ -13,15 +13,15 @@ const _m = new Date().getMonth() + 1;
 
 export const MOCK_CURRENT_TASKS: MonthlyTask[] = [
   // アルファ商事：データ受領○、会計入力○
-  { id: "t01", client_id: "11111111-0000-4000-8000-000000000001", year: _y, month: _m, task_index: 0, completed_at: new Date().toISOString(), memo: null, created_at: new Date().toISOString() },
-  { id: "t02", client_id: "11111111-0000-4000-8000-000000000001", year: _y, month: _m, task_index: 1, completed_at: new Date().toISOString(), memo: "確認済み", created_at: new Date().toISOString() },
+  { id: "t01", client_id: "11111111-0000-4000-8000-000000000001", year: _y, month: _m, task_index: 0, completed_at: new Date().toISOString(), waiting_since: null, memo: null, created_at: new Date().toISOString() },
+  { id: "t02", client_id: "11111111-0000-4000-8000-000000000001", year: _y, month: _m, task_index: 1, completed_at: new Date().toISOString(), waiting_since: null, memo: "確認済み", created_at: new Date().toISOString() },
   // ベータ製作所：データ受領のみ完了
-  { id: "t03", client_id: "11111111-0000-4000-8000-000000000002", year: _y, month: _m, task_index: 0, completed_at: new Date().toISOString(), memo: null, created_at: new Date().toISOString() },
+  { id: "t03", client_id: "11111111-0000-4000-8000-000000000002", year: _y, month: _m, task_index: 0, completed_at: new Date().toISOString(), waiting_since: null, memo: null, created_at: new Date().toISOString() },
   // デルタフーズ：データ受領完了
-  { id: "t04", client_id: "11111111-0000-4000-8000-000000000004", year: _y, month: _m, task_index: 0, completed_at: new Date().toISOString(), memo: null, created_at: new Date().toISOString() },
+  { id: "t04", client_id: "11111111-0000-4000-8000-000000000004", year: _y, month: _m, task_index: 0, completed_at: new Date().toISOString(), waiting_since: null, memo: null, created_at: new Date().toISOString() },
   // イプシロン：全完了
-  { id: "t05", client_id: "11111111-0000-4000-8000-000000000005", year: _y, month: _m, task_index: 0, completed_at: new Date().toISOString(), memo: null, created_at: new Date().toISOString() },
-  { id: "t06", client_id: "11111111-0000-4000-8000-000000000005", year: _y, month: _m, task_index: 1, completed_at: new Date().toISOString(), memo: null, created_at: new Date().toISOString() },
-  { id: "t07", client_id: "11111111-0000-4000-8000-000000000005", year: _y, month: _m, task_index: 2, completed_at: new Date().toISOString(), memo: null, created_at: new Date().toISOString() },
-  { id: "t08", client_id: "11111111-0000-4000-8000-000000000005", year: _y, month: _m, task_index: 3, completed_at: new Date().toISOString(), memo: null, created_at: new Date().toISOString() },
+  { id: "t05", client_id: "11111111-0000-4000-8000-000000000005", year: _y, month: _m, task_index: 0, completed_at: new Date().toISOString(), waiting_since: null, memo: null, created_at: new Date().toISOString() },
+  { id: "t06", client_id: "11111111-0000-4000-8000-000000000005", year: _y, month: _m, task_index: 1, completed_at: new Date().toISOString(), waiting_since: null, memo: null, created_at: new Date().toISOString() },
+  { id: "t07", client_id: "11111111-0000-4000-8000-000000000005", year: _y, month: _m, task_index: 2, completed_at: new Date().toISOString(), waiting_since: null, memo: null, created_at: new Date().toISOString() },
+  { id: "t08", client_id: "11111111-0000-4000-8000-000000000005", year: _y, month: _m, task_index: 3, completed_at: new Date().toISOString(), waiting_since: null, memo: null, created_at: new Date().toISOString() },
 ];

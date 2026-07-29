@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { Building2 } from "lucide-react";
+import { Building2, Clock } from "lucide-react";
 import { MONTHS } from "@/lib/constants";
 import type { Client, MonthlyTask } from "@/lib/types";
 import {
@@ -30,12 +30,12 @@ type Props = {
 function getCellData(
   tasks: MonthlyTask[],
   client: Client
-): { completed: number; total: number; nextAssignee: Assignee } {
+): { completed: number; total: number; nextAssignee: Assignee; isWaiting: boolean } {
   const enabledIndices = client.enabled_tasks
     .map((enabled, i) => (enabled ? i : -1))
     .filter((i) => i >= 0);
   const total = enabledIndices.length;
-  if (total === 0) return { completed: 0, total: 0, nextAssignee: null };
+  if (total === 0) return { completed: 0, total: 0, nextAssignee: null, isWaiting: false };
   const completed = tasks.filter(
     (t) => t.completed_at !== null && enabledIndices.includes(t.task_index)
   ).length;
@@ -47,7 +47,15 @@ function getCellData(
   const nextAssignee =
     nextIndex !== undefined ? client.task_assignees?.[nextIndex] ?? null : null;
 
-  return { completed, total, nextAssignee };
+  // クライアントからの資料待ちタスクが1件でもあれば、セル全体に反映する
+  const isWaiting = tasks.some(
+    (t) =>
+      t.completed_at === null &&
+      t.waiting_since !== null &&
+      enabledIndices.includes(t.task_index)
+  );
+
+  return { completed, total, nextAssignee, isWaiting };
 }
 
 function GanttCell({
@@ -63,7 +71,7 @@ function GanttCell({
   showNextIndicator: boolean;
   onClick: () => void;
 }) {
-  const { completed, total, nextAssignee } = getCellData(tasks, client);
+  const { completed, total, nextAssignee, isWaiting } = getCellData(tasks, client);
   const ratio = total === 0 ? 0 : completed / total;
   const isComplete = total > 0 && completed === total;
 
@@ -122,6 +130,12 @@ function GanttCell({
             )}
             style={{ height: `${Math.max(ratio * 100, 15)}%` }}
           />
+        )}
+        {/* 資料待ちインジケーター（未完了かつ資料待ちタスクがあるとき） */}
+        {!isComplete && isWaiting && (
+          <div className="absolute top-1 right-1 z-10">
+            <Clock className="size-3 text-amber-500" />
+          </div>
         )}
         {/* 完了アイコン（全完了時のみ） */}
         {isComplete && (
@@ -263,6 +277,9 @@ export function GanttTable({
         </span>
         <span className="inline-flex items-center gap-1.5">
           <span className="size-2 rounded-full bg-emerald-400" />完了
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <Clock className="size-3 text-amber-500" />資料待ち
         </span>
       </div>
       <div className="overflow-auto flex-1 min-h-0">

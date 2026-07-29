@@ -9,14 +9,14 @@ import {
 } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { TASKS } from "@/lib/constants";
-import type { Assignee, Client, MonthlyTask } from "@/lib/types";
+import type { Assignee, Client, MonthlyComment, MonthlyTask } from "@/lib/types";
 import {
   getDaysElapsed,
   getVisitStatus,
 } from "@/lib/visit-utils";
 import { cn } from "@/lib/utils";
 import { apiFetch } from "@/lib/api-fetch";
-import { CalendarDays, AlertCircle, Pencil, Check } from "lucide-react";
+import { CalendarDays, AlertCircle, Pencil, Check, Clock } from "lucide-react";
 import { AssigneeBadge } from "@/components/ui/assignee-badge";
 
 type Props = {
@@ -36,6 +36,7 @@ function TaskRow({
   task,
   assignee,
   onToggle,
+  onToggleWaiting,
   onMemoChange,
 }: {
   index: number;
@@ -43,9 +44,11 @@ function TaskRow({
   task: MonthlyTask | null;
   assignee: Assignee;
   onToggle: (index: number) => void;
+  onToggleWaiting: (index: number) => void;
   onMemoChange: (index: number, value: string) => void;
 }) {
   const isCompleted = !!task?.completed_at;
+  const isWaiting = !isCompleted && !!task?.waiting_since;
   const [ripple, setRipple] = useState(false);
   const [memoOpen, setMemoOpen] = useState(false);
 
@@ -63,6 +66,8 @@ function TaskRow({
         "relative rounded-xl border overflow-hidden transition-all duration-300 cursor-pointer select-none",
         isCompleted
           ? "bg-emerald-50/60 border-emerald-200"
+          : isWaiting
+          ? "bg-amber-50/60 border-amber-200"
           : "bg-card border-border hover:border-muted-foreground/30 active:scale-[0.99]"
       )}
       onClick={handleToggle}
@@ -86,22 +91,50 @@ function TaskRow({
             "shrink-0 flex items-center justify-center size-5 rounded-full border-2 transition-all duration-300",
             isCompleted
               ? "bg-emerald-500 border-emerald-500 text-white scale-110"
+              : isWaiting
+              ? "bg-amber-400 border-amber-400 text-white"
               : "border-muted-foreground/30 bg-transparent"
           )}
         >
           {isCompleted && <Check className="size-3 stroke-[3]" />}
+          {isWaiting && <Clock className="size-3" />}
         </span>
 
         <span
           className={cn(
             "text-sm flex-1 font-medium transition-all duration-300",
-            isCompleted ? "line-through text-muted-foreground" : "text-foreground"
+            isCompleted
+              ? "line-through text-muted-foreground"
+              : isWaiting
+              ? "text-amber-700"
+              : "text-foreground"
           )}
         >
           {taskName}
         </span>
 
+        {isWaiting && (
+          <span className="shrink-0 text-[10px] font-semibold text-amber-700 bg-amber-100 rounded-full px-2 py-0.5">
+            資料待ち
+          </span>
+        )}
+
         <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+          {/* 資料待ちトグル（未完了時のみ表示） */}
+          {!isCompleted && (
+            <button
+              onClick={() => onToggleWaiting(index)}
+              className={cn(
+                "p-1 rounded-md transition-colors",
+                isWaiting
+                  ? "text-amber-600 bg-amber-100 hover:bg-amber-200"
+                  : "text-muted-foreground/40 hover:text-muted-foreground hover:bg-muted"
+              )}
+              title="資料待ち"
+            >
+              <Clock className="size-3.5" />
+            </button>
+          )}
           {/* メモアイコン（完了時のみ表示） */}
           {isCompleted && (
             <button
@@ -161,6 +194,9 @@ export function TaskPanel({
   const [completingAll, setCompletingAll] = useState(false);
   const memoTimers = useRef<Record<number, ReturnType<typeof setTimeout>>>({});
 
+  const [comment, setComment] = useState("");
+  const commentTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
     setLocalTasks(tasks);
   }, [tasks]);
@@ -171,14 +207,48 @@ export function TaskPanel({
     };
   }, []);
 
+  useEffect(() => {
+    if (!open || !client) {
+      setComment("");
+      return;
+    }
+    let cancelled = false;
+    fetch(`/api/monthly-comments?client_id=${client.id}&year=${year}&month=${month}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: MonthlyComment | null) => {
+        if (!cancelled) setComment(data?.comment ?? "");
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [open, client, year, month]);
+
+  useEffect(() => {
+    return () => {
+      if (commentTimer.current) clearTimeout(commentTimer.current);
+    };
+  }, []);
+
   if (!client) return null;
+
+  const handleCommentChange = (value: string) => {
+    setComment(value);
+    if (commentTimer.current) clearTimeout(commentTimer.current);
+    commentTimer.current = setTimeout(() => {
+      apiFetch("/api/monthly-comments", {
+        method: "POST",
+        body: JSON.stringify({ client_id: client.id, year, month, comment: value }),
+      });
+    }, 800);
+  };
 
   const getTask = (index: number) =>
     localTasks.find((t) => t.task_index === index) ?? null;
 
   const upsertTask = async (
     index: number,
-    patch: Partial<Pick<MonthlyTask, "memo">> & { completed?: boolean }
+    patch: Partial<Pick<MonthlyTask, "memo">> & { completed?: boolean; waiting?: boolean }
   ) => {
     const existing = getTask(index);
 
@@ -188,6 +258,7 @@ export function TaskPanel({
       month,
       task_index: index,
       completed: patch.completed ?? (existing?.completed_at !== null && existing?.completed_at !== undefined),
+      waiting: patch.waiting ?? (existing?.waiting_since !== null && existing?.waiting_since !== undefined),
       memo: patch.memo !== undefined ? patch.memo : (existing?.memo ?? null),
     };
 
@@ -210,6 +281,12 @@ export function TaskPanel({
     const existing = getTask(index);
     const isCompleted = !!existing?.completed_at;
     await upsertTask(index, { completed: !isCompleted });
+  };
+
+  const toggleWaiting = async (index: number) => {
+    const existing = getTask(index);
+    const isWaiting = !!existing?.waiting_since;
+    await upsertTask(index, { waiting: !isWaiting });
   };
 
   const handleMemoChange = (index: number, value: string) => {
@@ -349,9 +426,24 @@ export function TaskPanel({
               task={getTask(i)}
               assignee={client.task_assignees?.[i] ?? null}
               onToggle={toggleComplete}
+              onToggleWaiting={toggleWaiting}
               onMemoChange={handleMemoChange}
             />
           ))}
+
+          {/* 自由記載欄（月次コメント、ステップ単位ではなく全体で1つ） */}
+          <div className="pt-4">
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-2">
+              コメント
+            </h3>
+            <textarea
+              value={comment}
+              onChange={(e) => handleCommentChange(e.target.value)}
+              placeholder="自由に記載してください..."
+              rows={4}
+              className="w-full min-w-0 rounded-lg border border-input bg-transparent px-2.5 py-2 text-sm transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 resize-none dark:bg-input/30"
+            />
+          </div>
         </div>
       </SheetContent>
     </Sheet>
