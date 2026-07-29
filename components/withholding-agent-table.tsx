@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
-import { Building2, Check } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Building2, Check, MessageSquare } from "lucide-react";
 import { MONTHS } from "@/lib/constants";
 import type { Client, WithholdingAgentTask } from "@/lib/types";
 import { AssigneeBadge } from "@/components/ui/assignee-badge";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { apiFetch } from "@/lib/api-fetch";
 import { cn } from "@/lib/utils";
 
@@ -31,14 +32,29 @@ function MonthCell({
   active,
   saving,
   onClick,
+  onCommentSave,
 }: {
   task: WithholdingAgentTask | undefined;
   isCurrentMonth: boolean;
   active: boolean;
   saving: boolean;
   onClick: () => void;
+  onCommentSave: (value: string) => void;
 }) {
   const isDone = !!task?.completed_at;
+  const [commentOpen, setCommentOpen] = useState(false);
+  const [commentDraft, setCommentDraft] = useState(task?.comment ?? "");
+  const commentTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    setCommentDraft(task?.comment ?? "");
+  }, [task?.comment]);
+
+  useEffect(() => {
+    return () => {
+      if (commentTimer.current) clearTimeout(commentTimer.current);
+    };
+  }, []);
 
   if (!active) {
     return (
@@ -48,21 +64,57 @@ function MonthCell({
     );
   }
 
+  const handleCommentChange = (value: string) => {
+    setCommentDraft(value);
+    if (commentTimer.current) clearTimeout(commentTimer.current);
+    commentTimer.current = setTimeout(() => onCommentSave(value), 600);
+  };
+
   return (
-    <button
-      onClick={onClick}
-      disabled={saving}
-      className={cn(
-        "w-12 h-9 flex items-center justify-center rounded text-xs font-medium transition-colors select-none disabled:opacity-50",
-        isDone
-          ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
-          : isCurrentMonth
-          ? "bg-blue-50 border border-blue-200 text-blue-300 hover:bg-blue-100"
-          : "bg-gray-50 text-gray-300 hover:bg-gray-100"
-      )}
-    >
-      {isDone && <Check className="size-3.5 stroke-[3]" />}
-    </button>
+    <div className="group relative w-12 h-9">
+      <button
+        onClick={onClick}
+        disabled={saving}
+        className={cn(
+          "w-12 h-9 flex items-center justify-center rounded text-xs font-medium transition-colors select-none disabled:opacity-50",
+          isDone
+            ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
+            : isCurrentMonth
+            ? "bg-blue-50 border border-blue-200 text-blue-300 hover:bg-blue-100"
+            : "bg-gray-50 text-gray-300 hover:bg-gray-100"
+        )}
+      >
+        {isDone && <Check className="size-3.5 stroke-[3]" />}
+      </button>
+
+      <Popover open={commentOpen} onOpenChange={setCommentOpen}>
+        <PopoverTrigger
+          onClick={(e) => e.stopPropagation()}
+          title="コメント"
+          className={cn(
+            "absolute -top-1.5 -right-1.5 flex items-center justify-center size-4 rounded-full transition-colors",
+            task?.comment
+              ? "bg-amber-400 text-white"
+              : "bg-gray-200 text-gray-400 opacity-0 group-hover:opacity-100 hover:bg-gray-300"
+          )}
+        >
+          <MessageSquare className="size-2.5" />
+        </PopoverTrigger>
+        <PopoverContent
+          className="w-56 p-2"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <textarea
+            value={commentDraft}
+            onChange={(e) => handleCommentChange(e.target.value)}
+            placeholder="コメント..."
+            rows={3}
+            autoFocus
+            className="w-full min-w-0 rounded-md border border-input bg-transparent px-2 py-1.5 text-xs outline-none resize-none focus-visible:ring-2 focus-visible:ring-ring/50"
+          />
+        </PopoverContent>
+      </Popover>
+    </div>
   );
 }
 
@@ -108,6 +160,23 @@ export function WithholdingAgentTable({
     }
   }
 
+  async function saveComment(client: Client, month: number, comment: string) {
+    try {
+      const res = await apiFetch("/api/withholding-agent-tasks", {
+        method: "POST",
+        body: JSON.stringify({ client_id: client.id, year, month, comment }),
+      });
+      if (res.ok) {
+        const data: WithholdingAgentTask = await res.json();
+        onTaskUpdated(data);
+      } else {
+        onError(`コメントの保存に失敗しました(エラーコード: ${res.status})。`);
+      }
+    } catch {
+      onError("通信エラーが発生しました。ネットワーク状態を確認してください。");
+    }
+  }
+
   return (
     <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
       <table className="border-collapse text-sm w-full" style={{ minWidth: "900px" }}>
@@ -119,17 +188,23 @@ export function WithholdingAgentTable({
             <th className="sticky left-0 z-10 bg-gray-50 text-left px-3 py-2.5 font-semibold text-gray-600 border-r border-gray-200 w-36 min-w-[144px]">
               会社名
             </th>
-            {MONTHS.map((m) => (
-              <th
-                key={m}
-                className={cn(
-                  "text-center px-1 py-2.5 font-semibold text-gray-600 border-r border-gray-100 w-14 min-w-[56px]",
-                  year === currentYear && m === currentMonth && "bg-blue-50 text-blue-700"
-                )}
-              >
-                {m}月
-              </th>
-            ))}
+            {MONTHS.map((m) => {
+              const sourceMonth = m === 1 ? 12 : m - 1;
+              return (
+                <th
+                  key={m}
+                  className={cn(
+                    "text-center px-1 py-1.5 font-semibold text-gray-600 border-r border-gray-100 w-14 min-w-[56px]",
+                    year === currentYear && m === currentMonth && "bg-blue-50 text-blue-700"
+                  )}
+                >
+                  <div className="flex flex-col items-center leading-tight">
+                    <span>{m}月</span>
+                    <span className="text-[10px] font-normal text-gray-400">{sourceMonth}月分</span>
+                  </div>
+                </th>
+              );
+            })}
             <th className="text-center px-2 py-2.5 font-semibold text-gray-500 w-14 min-w-[56px] text-xs">
               担当
             </th>
@@ -186,6 +261,7 @@ export function WithholdingAgentTable({
                         active={isMonthActive(client, m)}
                         saving={savingKey === key}
                         onClick={() => toggleCell(client, m)}
+                        onCommentSave={(value) => saveComment(client, m, value)}
                       />
                     </td>
                   );

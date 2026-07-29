@@ -126,6 +126,10 @@ create table if not exists withholding_agent_tasks (
   unique(client_id, year, month)
 );
 
+-- 源泉代行の各セルに対する一言コメント
+alter table withholding_agent_tasks
+  add column if not exists comment text;
+
 alter table withholding_agent_tasks enable row level security;
 
 create policy "authenticated_domain" on withholding_agent_tasks

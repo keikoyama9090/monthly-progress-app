@@ -70,6 +70,7 @@ export type WithholdingAgentTask = {
   year: number;
   month: number;
   completed_at: string | null;
+  comment: string | null;
   created_at: string;
 };
 
