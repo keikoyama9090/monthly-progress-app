@@ -1,11 +1,9 @@
 import type { Client, MonthlyTask } from './types';
-import { getDaysElapsed, getVisitStatus } from './visit-utils';
 
 export type BriefingItem = {
   clientId: string;
   clientName: string;
   deadlineText: string | null;
-  visitText: string | null;
   memoHighlight: string | null;
   priority: number;
 };
@@ -51,15 +49,6 @@ function buildDeadlineStatus(
   return null;
 }
 
-function buildVisitStatus(client: Client, latestVisit: string | undefined): string | null {
-  if (client.no_visit) return null;
-  const days = getDaysElapsed(latestVisit);
-  const status = getVisitStatus(days);
-  if (status === 'danger') return `🔴 訪問${days}日経過（要対応）`;
-  if (status === 'warn') return `🟡 訪問${days}日経過`;
-  return null;
-}
-
 function getMemoHighlight(clientTasks: MonthlyTask[]): string | null {
   const withMemo = clientTasks
     .filter((t) => t.memo != null && t.memo.trim().length > 0)
@@ -70,7 +59,6 @@ function getMemoHighlight(clientTasks: MonthlyTask[]): string | null {
 export function buildBriefingItems(
   clients: Client[],
   targetMonthTasks: MonthlyTask[],
-  latestVisits: Record<string, string>,
   today: Date = new Date()
 ): BriefingItem[] {
   const items: BriefingItem[] = [];
@@ -79,25 +67,16 @@ export function buildBriefingItems(
   for (const client of clients) {
     const clientTasks = targetMonthTasks.filter((t) => t.client_id === client.id);
     const deadlineText = buildDeadlineStatus(client, clientTasks, today, targetMonth);
-    const visitText = buildVisitStatus(client, latestVisits[client.id]);
     const memoHighlight = getMemoHighlight(clientTasks);
 
-    if (!deadlineText && !visitText && !memoHighlight) continue;
+    if (!deadlineText && !memoHighlight) continue;
 
-    const visitStatus = client.no_visit
-      ? 'none'
-      : getVisitStatus(getDaysElapsed(latestVisits[client.id]));
-
-    let priority = 4;
-    if (visitStatus === 'danger') priority = 1;
-    else if (deadlineText) priority = 2;
-    else if (visitStatus === 'warn') priority = 3;
+    const priority = deadlineText ? 1 : 2;
 
     items.push({
       clientId: client.id,
       clientName: client.name,
       deadlineText,
-      visitText,
       memoHighlight,
       priority,
     });

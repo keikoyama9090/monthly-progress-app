@@ -125,8 +125,8 @@ export function HomeClient({
   }, [targetMonth]);
 
   const briefingItems = useMemo(
-    () => buildBriefingItems(clients, targetMonthTasks, latestVisits),
-    [clients, targetMonthTasks, latestVisits]
+    () => buildBriefingItems(clients, targetMonthTasks),
+    [clients, targetMonthTasks]
   );
 
   const selectedClient = selectedCell
