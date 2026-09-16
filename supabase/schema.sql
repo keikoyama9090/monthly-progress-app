@@ -163,6 +163,10 @@ create table if not exists monthly_comments (
 
 create index if not exists idx_monthly_comments_year_client on monthly_comments(year, client_id);
 
+-- monthly_comments テーブルへの追加カラム（freeeにコメントを入力済みかどうかのフラグ）
+alter table monthly_comments
+  add column if not exists has_freee_comment boolean not null default false;
+
 -- 各クライアントの最新訪問日を返す RPC 関数
 create or replace function get_latest_visits()
 returns table(client_id uuid, visited_on date)

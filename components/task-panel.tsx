@@ -16,7 +16,7 @@ import {
 } from "@/lib/visit-utils";
 import { cn } from "@/lib/utils";
 import { apiFetch } from "@/lib/api-fetch";
-import { CalendarDays, AlertCircle, Pencil, Check, Clock } from "lucide-react";
+import { CalendarDays, AlertCircle, Pencil, Check, Clock, MessageSquareText } from "lucide-react";
 import { AssigneeBadge } from "@/components/ui/assignee-badge";
 
 type Props = {
@@ -197,6 +197,8 @@ export function TaskPanel({
   const [comment, setComment] = useState("");
   const commentTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const [hasFreeeComment, setHasFreeeComment] = useState(false);
+
   useEffect(() => {
     setLocalTasks(tasks);
   }, [tasks]);
@@ -210,13 +212,17 @@ export function TaskPanel({
   useEffect(() => {
     if (!open || !client) {
       setComment("");
+      setHasFreeeComment(false);
       return;
     }
     let cancelled = false;
     fetch(`/api/monthly-comments?client_id=${client.id}&year=${year}&month=${month}`)
       .then((res) => (res.ok ? res.json() : null))
       .then((data: MonthlyComment | null) => {
-        if (!cancelled) setComment(data?.comment ?? "");
+        if (!cancelled) {
+          setComment(data?.comment ?? "");
+          setHasFreeeComment(data?.has_freee_comment ?? false);
+        }
       })
       .catch(() => {});
     return () => {
@@ -238,9 +244,30 @@ export function TaskPanel({
     commentTimer.current = setTimeout(() => {
       apiFetch("/api/monthly-comments", {
         method: "POST",
-        body: JSON.stringify({ client_id: client.id, year, month, comment: value }),
+        body: JSON.stringify({
+          client_id: client.id,
+          year,
+          month,
+          comment: value,
+          has_freee_comment: hasFreeeComment,
+        }),
       });
     }, 800);
+  };
+
+  const toggleFreeeComment = () => {
+    const next = !hasFreeeComment;
+    setHasFreeeComment(next);
+    apiFetch("/api/monthly-comments", {
+      method: "POST",
+      body: JSON.stringify({
+        client_id: client.id,
+        year,
+        month,
+        comment,
+        has_freee_comment: next,
+      }),
+    });
   };
 
   const getTask = (index: number) =>
@@ -430,6 +457,46 @@ export function TaskPanel({
               onMemoChange={handleMemoChange}
             />
           ))}
+
+          {/* freeeコメント有無（タスクの並びとは別枠のインジケーター） */}
+          <div className="pt-4">
+            <button
+              onClick={toggleFreeeComment}
+              className={cn(
+                "w-full flex items-center justify-between gap-2 rounded-xl border px-3.5 py-2.5 transition-colors",
+                hasFreeeComment
+                  ? "bg-emerald-50/60 border-emerald-200 hover:bg-emerald-50"
+                  : "bg-card border-border hover:border-muted-foreground/30"
+              )}
+            >
+              <span className="flex items-center gap-2">
+                <MessageSquareText
+                  className={cn(
+                    "size-4",
+                    hasFreeeComment ? "text-emerald-600" : "text-muted-foreground/50"
+                  )}
+                />
+                <span
+                  className={cn(
+                    "text-sm font-medium",
+                    hasFreeeComment ? "text-emerald-700" : "text-muted-foreground"
+                  )}
+                >
+                  {hasFreeeComment ? "freeeコメントあり！" : "freeeコメント未記入"}
+                </span>
+              </span>
+              <span
+                className={cn(
+                  "shrink-0 flex items-center justify-center size-5 rounded-full border-2 transition-all duration-300",
+                  hasFreeeComment
+                    ? "bg-emerald-500 border-emerald-500 text-white"
+                    : "border-muted-foreground/30 bg-transparent"
+                )}
+              >
+                {hasFreeeComment && <Check className="size-3 stroke-[3]" />}
+              </span>
+            </button>
+          </div>
 
           {/* 自由記載欄（月次コメント、ステップ単位ではなく全体で1つ） */}
           <div className="pt-4">

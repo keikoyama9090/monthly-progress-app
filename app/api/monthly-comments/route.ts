@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
   if (authError) return authError;
 
   const body = await request.json();
-  const { client_id, year, month, comment } = body as Record<string, unknown>;
+  const { client_id, year, month, comment, has_freee_comment } = body as Record<string, unknown>;
 
   if (typeof client_id !== "string" || !UUID_RE.test(client_id)) {
     return NextResponse.json({ error: "Invalid client_id" }, { status: 400 });
@@ -48,14 +48,19 @@ export async function POST(request: NextRequest) {
   if (comment !== null && comment !== undefined && (typeof comment !== "string" || comment.length > COMMENT_MAX_LENGTH)) {
     return NextResponse.json({ error: "Invalid comment" }, { status: 400 });
   }
+  if (has_freee_comment !== undefined && typeof has_freee_comment !== "boolean") {
+    return NextResponse.json({ error: "Invalid has_freee_comment" }, { status: 400 });
+  }
 
   const commentVal = (comment as string | null | undefined) ?? null;
+  const hasFreeeCommentVal = (has_freee_comment as boolean | undefined) ?? false;
 
   const rows = await sql`
-    INSERT INTO monthly_comments (client_id, year, month, comment, updated_at)
-    VALUES (${client_id}, ${year as number}, ${month as number}, ${commentVal}, now())
+    INSERT INTO monthly_comments (client_id, year, month, comment, has_freee_comment, updated_at)
+    VALUES (${client_id}, ${year as number}, ${month as number}, ${commentVal}, ${hasFreeeCommentVal}, now())
     ON CONFLICT (client_id, year, month) DO UPDATE SET
       comment = EXCLUDED.comment,
+      has_freee_comment = EXCLUDED.has_freee_comment,
       updated_at = now()
     RETURNING *
   `;

@@ -35,6 +35,7 @@ export type MonthlyComment = {
   year: number;
   month: number;
   comment: string | null;
+  has_freee_comment: boolean;
   created_at: string;
   updated_at: string;
 };
