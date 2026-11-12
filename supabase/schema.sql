@@ -177,3 +177,37 @@ as $$
   from visits
   order by client_id, visited_on desc;
 $$;
+
+-- ============================================================
+-- 決算ボード（v0）
+-- 1社1期で1枚のカード。列（stage）を左から右へ進める。
+-- ============================================================
+create table if not exists kessan_cards (
+  id uuid primary key default gen_random_uuid(),
+  client_id uuid not null references clients(id) on delete cascade,
+  period_end date not null,                       -- 決算日（例: 2026-09-30）
+  stage text not null default 'todo'
+    check (stage in ('todo', 'working', 'review', 'report', 'filing', 'binding', 'done')),
+  next_action text check (next_action in ('K', 'C', 'client')),
+  waiting_since timestamptz,                      -- 資料待ちにした日時（null = 資料待ちではない）
+  extended boolean not null default false,        -- 申告期限の延長あり
+  paid_corporate boolean not null default false,  -- 法人税 納付確認
+  paid_consumption boolean not null default false,-- 消費税 納付確認
+  paid_local boolean not null default false,      -- 地方税 納付確認
+  completed_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (client_id, period_end)
+);
+
+create index if not exists idx_kessan_cards_stage on kessan_cards(stage);
+
+-- カードごとの1行コメント履歴（上書きせず積み上げる）
+create table if not exists kessan_comments (
+  id uuid primary key default gen_random_uuid(),
+  card_id uuid not null references kessan_cards(id) on delete cascade,
+  body text not null,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_kessan_comments_card on kessan_comments(card_id, created_at desc);
