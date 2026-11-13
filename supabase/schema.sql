@@ -211,3 +211,7 @@ create table if not exists kessan_comments (
 );
 
 create index if not exists idx_kessan_comments_card on kessan_comments(card_id, created_at desc);
+
+-- 決算ボード：製本列のチェック（データ送付・製本郵送）
+alter table kessan_cards add column if not exists data_sent boolean not null default false;
+alter table kessan_cards add column if not exists bound_mailed boolean not null default false;

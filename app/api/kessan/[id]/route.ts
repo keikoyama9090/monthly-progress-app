@@ -2,11 +2,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 import { requireSession } from "@/lib/require-session";
 import { fetchKessanCard } from "@/lib/kessan-db";
-import { KESSAN_STAGE_KEYS, allPaid, type KessanStage, type KessanNextAction } from "@/lib/kessan";
+import { KESSAN_STAGE_KEYS, remainingChecks, type KessanStage, type KessanNextAction } from "@/lib/kessan";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const NEXT_ACTIONS = ["K", "C", "client"];
-const BOOL_FIELDS = ["extended", "paid_corporate", "paid_consumption", "paid_local"] as const;
+const BOOL_FIELDS = [
+  "extended",
+  "paid_corporate",
+  "paid_consumption",
+  "paid_local",
+  "data_sent",
+  "bound_mailed",
+] as const;
 
 type Params = { params: { id: string } };
 
@@ -51,11 +58,11 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     }
   }
 
-  // 完了は「製本列にいて、納付チェックが全部ついている」ときだけ
+  // 完了は「製本列にいて、データ送付・製本郵送・納付確認3つが全部ついている」ときだけ
   if (next.stage === "done" && current.stage !== "done") {
-    if (current.stage !== "binding" || !allPaid(next)) {
+    if (current.stage !== "binding" || remainingChecks(next) > 0) {
       return NextResponse.json(
-        { error: "製本列で納付チェックがすべて付いたカードだけ完了にできます" },
+        { error: "製本列で、データ送付・製本郵送・納付確認がすべて付いたカードだけ完了にできます" },
         { status: 400 }
       );
     }
@@ -72,6 +79,8 @@ export async function PATCH(request: NextRequest, { params }: Params) {
       paid_corporate = ${next.paid_corporate},
       paid_consumption = ${next.paid_consumption},
       paid_local = ${next.paid_local},
+      data_sent = ${next.data_sent},
+      bound_mailed = ${next.bound_mailed},
       completed_at = ${completedAt},
       updated_at = now()
     WHERE id = ${params.id}
