@@ -15,6 +15,9 @@ import {
   canComplete,
   filingDeadline,
   periodLabel,
+  shortDate,
+  daysLabel,
+  daysUntil,
   type KessanCard,
   type KessanComment,
 } from "@/lib/kessan";
@@ -107,7 +110,7 @@ export function KessanCardSheet({ card, onOpenChange, onPatch, onCommentAdded, o
                 {card.client_name}
               </SheetTitle>
               <p className="text-xs text-muted-foreground tabular-nums">
-                {periodLabel(card.period_end)}・申告期限 {filingDeadline(card.period_end, card.extended)}
+                {periodLabel(card.period_end)}・申告期限 {shortDate(filingDeadline(card.period_end, card.extended))}（{daysLabel(daysUntil(filingDeadline(card.period_end, card.extended)))}）
               </p>
             </SheetHeader>
 
@@ -139,6 +142,8 @@ export function KessanCardSheet({ card, onOpenChange, onPatch, onCommentAdded, o
                 <div className="flex items-center gap-3">
                   <span className="text-xs font-semibold text-muted-foreground w-24">次のアクション</span>
                   <AssigneeBadge
+                    emptyLabel="＋"
+                    title="クリックで K → C → 客 → なし"
                     assignee={card.next_action}
                     onClick={() => {
                       const next = cycleAssignee(card.next_action);
