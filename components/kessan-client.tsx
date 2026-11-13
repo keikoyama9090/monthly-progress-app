@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useMemo, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, Hourglass, Plus, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Hourglass, Info, Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { AppNav, AppLogo, UserMenu } from "@/components/app-nav";
 import { AssigneeBadge, cycleAssignee } from "@/components/ui/assignee-badge";
 import { KessanCardSheet } from "@/components/kessan-card-sheet";
@@ -17,6 +18,9 @@ import {
   periodLabel,
   previousMonthJST,
   shortDate,
+  daysUntil,
+  daysLabel,
+  deadlineUrgency,
   type KessanCard,
   type KessanStage,
 } from "@/lib/kessan";
@@ -112,12 +116,24 @@ export function KessanClient({ initialCards }: Props) {
 
   const columns = useMemo(() => {
     const keys: KessanStage[] = [...KESSAN_STAGES.map((s) => s.key), "done"];
-    return keys.map((key) => ({
-      key,
-      label: key === "done" ? "完了" : KESSAN_STAGES.find((s) => s.key === key)!.label,
-      hint: key === "done" ? "直近90日" : KESSAN_STAGES.find((s) => s.key === key)!.hint,
-      cards: cards.filter((c) => c.stage === key),
-    }));
+    const deadlineOf = (c: KessanCard) => filingDeadline(c.period_end, c.extended);
+    return keys.map((key) => {
+      const stage = KESSAN_STAGES.find((s) => s.key === key);
+      const colCards = cards.filter((c) => c.stage === key);
+      // 完了は新しく完了した順、それ以外は申告期限が早い順（超過が先頭）
+      colCards.sort((a, b) =>
+        key === "done"
+          ? (b.completed_at ?? "").localeCompare(a.completed_at ?? "")
+          : deadlineOf(a).localeCompare(deadlineOf(b)) || a.sort_order - b.sort_order
+      );
+      return {
+        key,
+        label: stage?.label ?? "完了",
+        hint: stage?.hint ?? "直近90日",
+        steps: (stage?.steps ?? []) as readonly string[],
+        cards: colCards,
+      };
+    });
   }, [cards]);
 
   const selectedCard = cards.find((c) => c.id === selectedId) ?? null;
@@ -150,39 +166,69 @@ export function KessanClient({ initialCards }: Props) {
       </header>
 
       <main className="flex-1 min-h-0 w-full overflow-x-auto">
-        <div className="max-w-screen-2xl mx-auto px-6 py-5 h-full flex gap-3">
-          {columns.map((col) => (
-            <section
-              key={col.key}
-              className="w-60 shrink-0 flex flex-col h-full rounded-lg bg-muted/50 border border-border"
-            >
-              <div className="px-3 pt-3 pb-2 shrink-0">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-sm font-semibold text-foreground">{col.label}</h2>
-                  <span className="text-xs text-muted-foreground tabular-nums">{col.cards.length}</span>
+        <div className="px-6 py-5 h-full flex gap-3 items-start">
+          {columns.map((col) =>
+            col.cards.length === 0 ? (
+              // カードのない列は細く折りたたむ
+              <section
+                key={col.key}
+                title={`${col.label}：${col.hint}`}
+                className="w-11 shrink-0 self-stretch flex flex-col items-center gap-2 rounded-lg bg-muted/40 border border-dashed border-border pt-3"
+              >
+                <span className="text-xs text-muted-foreground tabular-nums">0</span>
+                <span className="text-xs font-medium text-muted-foreground [writing-mode:vertical-rl] tracking-widest">
+                  {col.label}
+                </span>
+              </section>
+            ) : (
+              <section
+                key={col.key}
+                className="flex-1 min-w-[200px] max-w-[300px] max-h-full flex flex-col rounded-lg bg-muted/50 border border-border"
+              >
+                <div className="px-3 pt-3 pb-2 shrink-0">
+                  <div className="flex items-center gap-1.5">
+                    <h2 className="text-sm font-semibold text-foreground">{col.label}</h2>
+                    {col.steps.length > 0 && (
+                      <Popover>
+                        <PopoverTrigger
+                          className="text-muted-foreground hover:text-foreground rounded outline-none focus-visible:ring-2 focus-visible:ring-ring/60"
+                          aria-label={`${col.label}でやること`}
+                        >
+                          <Info className="size-3.5" />
+                        </PopoverTrigger>
+                        <PopoverContent align="start" className="w-72">
+                          <p className="text-xs font-semibold text-foreground">{col.label}でやること</p>
+                          <ol className="list-decimal pl-4 text-xs text-foreground/80 space-y-1">
+                            {col.steps.map((step) => (
+                              <li key={step}>{step}</li>
+                            ))}
+                          </ol>
+                        </PopoverContent>
+                      </Popover>
+                    )}
+                    <div className="flex-1" />
+                    <span className="text-xs text-muted-foreground tabular-nums">{col.cards.length}</span>
+                  </div>
+                  <p className="text-xs text-foreground/60 mt-0.5 line-clamp-2">{col.hint}</p>
                 </div>
-                <p className="text-[11px] text-muted-foreground mt-0.5 truncate">{col.hint}</p>
-              </div>
 
-              <div className="flex-1 min-h-0 overflow-y-auto px-2 pb-2 flex flex-col gap-2">
-                {col.cards.map((card) => (
-                  <BoardCard
-                    key={card.id}
-                    card={card}
-                    onOpen={() => setSelectedId(card.id)}
-                    onMove={(delta) => moveCard(card, delta)}
-                    onCycleAction={() => {
-                      const next = cycleAssignee(card.next_action);
-                      patchCard(card, { next_action: next }, { next_action: next });
-                    }}
-                  />
-                ))}
-                {col.cards.length === 0 && (
-                  <p className="text-xs text-muted-foreground/60 text-center py-6">なし</p>
-                )}
-              </div>
-            </section>
-          ))}
+                <div className="min-h-0 overflow-y-auto px-2 pb-2 flex flex-col gap-2">
+                  {col.cards.map((card) => (
+                    <BoardCard
+                      key={card.id}
+                      card={card}
+                      onOpen={() => setSelectedId(card.id)}
+                      onMove={(delta) => moveCard(card, delta)}
+                      onCycleAction={() => {
+                        const next = cycleAssignee(card.next_action);
+                        patchCard(card, { next_action: next }, { next_action: next });
+                      }}
+                    />
+                  ))}
+                </div>
+              </section>
+            )
+          )}
         </div>
       </main>
 
@@ -244,18 +290,39 @@ function BoardCard({
   const idx = KESSAN_STAGE_KEYS.indexOf(card.stage);
   const isDone = card.stage === "done";
   const deadline = filingDeadline(card.period_end, card.extended);
+  const urgency = deadlineUrgency(card);
+  const days = daysUntil(deadline);
 
   return (
-    <div className="rounded-md bg-card border border-border shadow-xs hover:border-primary/40 transition-colors">
+    <div
+      className={cn(
+        "rounded-md border shadow-xs transition-colors",
+        urgency === "overdue"
+          ? "bg-red-50/60 border-red-300 hover:border-red-400"
+          : "bg-card border-border hover:border-primary/40"
+      )}
+    >
       <button onClick={onOpen} className="w-full text-left px-3 pt-2.5 pb-1.5">
         <div className="text-sm font-medium text-foreground leading-snug line-clamp-2">
           {card.client_name}
         </div>
-        <div className="mt-1 flex items-center gap-2 text-[11px] text-muted-foreground tabular-nums">
-          <span>{periodLabel(card.period_end)}</span>
-          <span>申告 {shortDate(deadline)}</span>
+        <div className="mt-1 text-xs text-foreground/60 tabular-nums">{periodLabel(card.period_end)}</div>
+        <div
+          className={cn(
+            "mt-0.5 flex items-center gap-1.5 text-xs tabular-nums",
+            urgency === "overdue" && "text-red-600 font-semibold",
+            urgency === "warn" && "text-amber-700 font-medium",
+            urgency === "normal" && "text-foreground/80",
+            urgency === "filed" && "text-foreground/50"
+          )}
+        >
+          <span>
+            期限 {shortDate(deadline)}
+            {urgency !== "filed" && `・${daysLabel(days)}`}
+            {urgency === "filed" && "・申告済"}
+          </span>
           {card.extended && (
-            <span className="rounded bg-slate-100 px-1 text-slate-600">延長</span>
+            <span className="rounded bg-slate-100 px-1 text-[11px] font-normal text-slate-600">延長</span>
           )}
         </div>
         {card.latest_comment && (
@@ -264,7 +331,13 @@ function BoardCard({
       </button>
 
       <div className="flex items-center gap-1.5 px-2 pb-2">
-        <AssigneeBadge assignee={card.next_action} onClick={onCycleAction} disabled={isDone} />
+        <AssigneeBadge
+          assignee={card.next_action}
+          onClick={onCycleAction}
+          disabled={isDone}
+          emptyLabel="＋"
+          title="クリックで K → C → 客 → なし"
+        />
         {card.waiting_since && (
           <span className="inline-flex items-center gap-0.5 rounded bg-amber-50 px-1.5 py-0.5 text-[11px] text-amber-700 ring-1 ring-amber-200">
             <Hourglass className="size-3" />

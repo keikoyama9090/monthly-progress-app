@@ -2,12 +2,42 @@
 // クライアント側・サーバー側の両方から import される（DBアクセスは含めない）
 
 export const KESSAN_STAGES = [
-  { key: "todo", label: "未着手", hint: "今月の決算先" },
-  { key: "working", label: "決算中", hint: "資料依頼・決算処理・申告書作成" },
-  { key: "review", label: "社内レビュー", hint: "freee申告書チェック・self kessan review" },
-  { key: "report", label: "クライアント報告", hint: "報告して申告OKを待つ" },
-  { key: "filing", label: "申告", hint: "電子申告の送信" },
-  { key: "binding", label: "製本", hint: "データ送付・製本郵送・納付確認" },
+  {
+    key: "todo",
+    label: "未着手",
+    hint: "今月の決算先",
+    steps: ["決算月の翌月に投入された決算先", "資料依頼を始めたら「決算中」へ"],
+  },
+  {
+    key: "working",
+    label: "決算中",
+    hint: "資料回収→決算処理→申告書作成",
+    steps: ["決算資料の依頼・回収", "決算整理・決算書の作成", "法人税・消費税・地方税の申告書作成"],
+  },
+  {
+    key: "review",
+    label: "社内レビュー",
+    hint: "申告書のセルフチェック",
+    steps: ["freeeの申告書チェック", "self kessan reviewスキルでチェックし、Googleドキュメントに指摘をまとめる", "指摘に対応する"],
+  },
+  {
+    key: "report",
+    label: "クライアント報告",
+    hint: "報告して申告OKを待つ",
+    steps: ["報告文を作成して送る（納税額・納期限・判断ポイント）", "お客様から申告OKをもらう"],
+  },
+  {
+    key: "filing",
+    label: "申告",
+    hint: "電子申告の送信",
+    steps: ["税務署・都道府県・市区町村へ電子申告を送信する"],
+  },
+  {
+    key: "binding",
+    label: "製本",
+    hint: "送付・郵送・納付確認",
+    steps: ["申告書・決算書のデータを送付", "製本した決算書等を郵送", "法人税・消費税・地方税の納付を確認", "5つ揃ったら「完了」へ"],
+  },
 ] as const;
 
 export type KessanStage = (typeof KESSAN_STAGES)[number]["key"] | "done";
@@ -105,6 +135,34 @@ export function remainingChecks(card: Pick<KessanCard, PaidField | BindingField>
 
 export function canComplete(card: KessanCard): boolean {
   return card.stage === "binding" && remainingChecks(card) === 0;
+}
+
+/** 日本時間の今日から ymd（YYYY-MM-DD）までの日数。過ぎていればマイナス */
+export function daysUntil(ymd: string, today: Date = new Date()): number {
+  const todayYmd = today.toLocaleDateString("sv-SE", { timeZone: "Asia/Tokyo" });
+  const toUtc = (s: string) => {
+    const [y, m, d] = s.split("-").map(Number);
+    return Date.UTC(y, m - 1, d);
+  };
+  return Math.round((toUtc(ymd) - toUtc(todayYmd)) / 86400000);
+}
+
+export const DEADLINE_WARN_DAYS = 14;
+
+/** 申告期限の緊急度。申告済み（製本・完了）は対象外 */
+export function deadlineUrgency(card: Pick<KessanCard, "stage" | "period_end" | "extended">):
+  "overdue" | "warn" | "normal" | "filed" {
+  if (card.stage === "binding" || card.stage === "done") return "filed";
+  const days = daysUntil(filingDeadline(card.period_end, card.extended));
+  if (days < 0) return "overdue";
+  if (days <= DEADLINE_WARN_DAYS) return "warn";
+  return "normal";
+}
+
+/** 「あと17日」「本日」「3日超過」 */
+export function daysLabel(days: number): string {
+  if (days === 0) return "本日";
+  return days > 0 ? `あと${days}日` : `${-days}日超過`;
 }
 
 /** 日本時間の今日から見た「前月」（決算月として投入する初期値） */

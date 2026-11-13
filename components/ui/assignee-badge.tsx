@@ -1,5 +1,6 @@
 "use client";
 
+import type { KeyboardEvent } from "react";
 import { cn } from "@/lib/utils";
 
 type AssigneeValue = "K" | "C" | "client" | null;
@@ -8,11 +9,31 @@ type Props = {
   assignee: AssigneeValue;
   onClick: () => void;
   disabled?: boolean;
+  /** 未設定のときに表示する文字（既定は「―」） */
+  emptyLabel?: string;
+  /** マウスを乗せたときの説明 */
+  title?: string;
 };
 
-export function AssigneeBadge({ assignee, onClick, disabled = false }: Props) {
+const LABELS: Record<Exclude<AssigneeValue, null>, string> = { K: "K", C: "C", client: "客" };
+
+export function AssigneeBadge({ assignee, onClick, disabled = false, emptyLabel = "―", title }: Props) {
+  // キーボードでも操作できるようにする（Enter / Space）
+  const a11y = disabled
+    ? {}
+    : {
+        role: "button" as const,
+        tabIndex: 0,
+        "aria-label": `次のアクション: ${assignee ? LABELS[assignee] : "未設定"}${title ? `（${title}）` : ""}`,
+        onKeyDown: (e: KeyboardEvent) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onClick();
+          }
+        },
+      };
   const base =
-    "inline-flex items-center justify-center rounded-md w-7 h-7 text-xs font-bold select-none transition-all";
+    "inline-flex items-center justify-center rounded-md w-7 h-7 text-xs font-bold select-none transition-all outline-none focus-visible:ring-2 focus-visible:ring-ring/60";
 
   const interactive = disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer";
 
@@ -20,6 +41,8 @@ export function AssigneeBadge({ assignee, onClick, disabled = false }: Props) {
     return (
       <span
         onClick={disabled ? undefined : onClick}
+        title={title}
+        {...a11y}
         className={cn(
           base,
           interactive,
@@ -27,7 +50,7 @@ export function AssigneeBadge({ assignee, onClick, disabled = false }: Props) {
           !disabled && "hover:border-muted-foreground/50 hover:text-muted-foreground"
         )}
       >
-        ―
+        {emptyLabel}
       </span>
     );
   }
@@ -42,7 +65,7 @@ export function AssigneeBadge({ assignee, onClick, disabled = false }: Props) {
   const label = assignee === "client" ? "客" : assignee;
 
   return (
-    <span onClick={disabled ? undefined : onClick} className={cn(base, interactive, colors)}>
+    <span onClick={disabled ? undefined : onClick} title={title} {...a11y} className={cn(base, interactive, colors)}>
       {label}
     </span>
   );
