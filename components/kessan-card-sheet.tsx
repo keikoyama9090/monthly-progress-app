@@ -11,6 +11,8 @@ import { cn } from "@/lib/utils";
 import {
   KESSAN_STAGES,
   BINDING_FIELDS,
+  REVIEW_FIELDS,
+  blockedByReview,
   PAID_FIELDS,
   canComplete,
   filingDeadline,
@@ -123,7 +125,8 @@ export function KessanCardSheet({ card, onOpenChange, onPatch, onCommentAdded, o
                     <button
                       key={s.key}
                       onClick={() => onPatch(card, { stage: s.key }, { stage: s.key })}
-                      disabled={card.stage === "done"}
+                      disabled={card.stage === "done" || blockedByReview(card, s.key)}
+                      title={blockedByReview(card, s.key) ? "社内レビューの2つが揃うと進めます" : undefined}
                       className={cn(
                         "rounded-md px-2.5 py-1 text-xs border transition-colors disabled:opacity-50",
                         card.stage === s.key
@@ -181,6 +184,27 @@ export function KessanCardSheet({ card, onOpenChange, onPatch, onCommentAdded, o
                   />
                   <span className="text-[11px] text-muted-foreground">ありにすると期限が1か月後ろへ</span>
                 </label>
+              </section>
+
+              {/* 社内レビュー */}
+              <section>
+                <h3 className="text-xs font-semibold text-muted-foreground mb-2">社内レビュー</h3>
+                <div className="flex flex-col gap-2">
+                  {REVIEW_FIELDS.map((f) => (
+                    <label key={f.key} className="flex items-center gap-1.5 text-sm cursor-pointer">
+                      <Checkbox
+                        checked={card[f.key]}
+                        onCheckedChange={(checked) =>
+                          onPatch(card, { [f.key]: checked === true }, { [f.key]: checked === true })
+                        }
+                      />
+                      {f.label}
+                    </label>
+                  ))}
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-1.5">
+                  2つ揃うと「クライアント報告」へ進めます。
+                </p>
               </section>
 
               {/* 製本・送付 */}

@@ -11,6 +11,7 @@ const CARD_SELECT = `
     k.stage, k.next_action, k.waiting_since, k.extended,
     k.paid_corporate, k.paid_consumption, k.paid_local,
     k.data_sent, k.bound_mailed,
+    k.review_freee_ai, k.review_self,
     k.completed_at, k.created_at, k.updated_at,
     lc.body AS latest_comment, lc.created_at AS latest_comment_at
   FROM kessan_cards k

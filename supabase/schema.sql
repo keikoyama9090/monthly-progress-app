@@ -215,3 +215,7 @@ create index if not exists idx_kessan_comments_card on kessan_comments(card_id, 
 -- 決算ボード：製本列のチェック（データ送付・製本郵送）
 alter table kessan_cards add column if not exists data_sent boolean not null default false;
 alter table kessan_cards add column if not exists bound_mailed boolean not null default false;
+
+-- 決算ボード：社内レビューのチェック（freee AIエージェントの申告書チェック・kessan-self-review）
+alter table kessan_cards add column if not exists review_freee_ai boolean not null default false;
+alter table kessan_cards add column if not exists review_self boolean not null default false;
