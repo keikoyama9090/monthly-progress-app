@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 import { requireSession } from "@/lib/require-session";
 import { fetchKessanCard } from "@/lib/kessan-db";
-import { KESSAN_STAGE_KEYS, remainingChecks, type KessanStage, type KessanNextAction } from "@/lib/kessan";
+import { KESSAN_STAGE_KEYS, blockedByReview, remainingChecks, type KessanStage, type KessanNextAction } from "@/lib/kessan";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const NEXT_ACTIONS = ["K", "C", "client"];
@@ -13,6 +13,8 @@ const BOOL_FIELDS = [
   "paid_local",
   "data_sent",
   "bound_mailed",
+  "review_freee_ai",
+  "review_self",
 ] as const;
 
 type Params = { params: { id: string } };
@@ -58,6 +60,14 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     }
   }
 
+  // 社内レビューの2つのチェックが揃うまで、クライアント報告以降へは進めない
+  if (next.stage !== current.stage && blockedByReview({ ...next, stage: current.stage }, next.stage)) {
+    return NextResponse.json(
+      { error: "社内レビューの2つ（freee AIエージェントの申告書チェック・kessan-self-review）が揃うと次へ進めます" },
+      { status: 400 }
+    );
+  }
+
   // 完了は「製本列にいて、データ送付・製本郵送・納付確認3つが全部ついている」ときだけ
   if (next.stage === "done" && current.stage !== "done") {
     if (current.stage !== "binding" || remainingChecks(next) > 0) {
@@ -81,6 +91,8 @@ export async function PATCH(request: NextRequest, { params }: Params) {
       paid_local = ${next.paid_local},
       data_sent = ${next.data_sent},
       bound_mailed = ${next.bound_mailed},
+      review_freee_ai = ${next.review_freee_ai},
+      review_self = ${next.review_self},
       completed_at = ${completedAt},
       updated_at = now()
     WHERE id = ${params.id}

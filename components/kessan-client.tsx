@@ -14,6 +14,9 @@ import {
   KESSAN_STAGE_KEYS,
   remainingChecks,
   canComplete,
+  blockedByReview,
+  reviewDoneCount,
+  REVIEW_FIELDS,
   filingDeadline,
   periodLabel,
   previousMonthJST,
@@ -83,10 +86,14 @@ export function KessanClient({ initialCards }: Props) {
       const idx = KESSAN_STAGE_KEYS.indexOf(card.stage);
       const nextStage = KESSAN_STAGE_KEYS[idx + delta];
       if (!nextStage) return;
+      if (blockedByReview(card, nextStage)) {
+        showToast("社内レビューの2つ（freee AIチェック・kessan-self-review）が揃うと次へ進めます。");
+        return;
+      }
       if (nextStage === "done" && !canComplete(card)) return; // 製本→完了は5つのチェックが揃ったときだけ
       patchCard(card, { stage: nextStage }, { stage: nextStage });
     },
-    [patchCard]
+    [patchCard, showToast]
   );
 
   const handleSeed = useCallback(async () => {
@@ -333,6 +340,19 @@ function BoardCard({
             資料待ち
           </span>
         )}
+        {card.stage === "review" && (
+          <span
+            className={cn(
+              "rounded px-1.5 py-0.5 text-[11px] ring-1",
+              reviewDoneCount(card) === REVIEW_FIELDS.length
+                ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
+                : "bg-muted text-muted-foreground ring-border"
+            )}
+            title="freee AIエージェントの申告書チェック・kessan-self-review"
+          >
+            レビュー {reviewDoneCount(card)}/{REVIEW_FIELDS.length}
+          </span>
+        )}
         {card.stage === "binding" && (
           <span
             className={cn(
@@ -361,7 +381,10 @@ function BoardCard({
               variant="ghost"
               size="icon-xs"
               onClick={() => onMove(1)}
-              disabled={card.stage === "binding" && !canComplete(card)}
+              disabled={
+                (card.stage === "binding" && !canComplete(card)) ||
+                (card.stage === "review" && blockedByReview(card, "report"))
+              }
               aria-label="次の列へ"
             >
               <ChevronRight />

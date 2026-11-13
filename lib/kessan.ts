@@ -17,8 +17,12 @@ export const KESSAN_STAGES = [
   {
     key: "review",
     label: "社内レビュー",
-    hint: "申告書のセルフチェック",
-    steps: ["freeeの申告書チェック", "self kessan reviewスキルでチェックし、Googleドキュメントに指摘をまとめる", "指摘に対応する"],
+    hint: "freee AIチェック・kessan-self-review",
+    steps: [
+      "freee AIエージェントで申告書チェック",
+      "kessan-self-reviewスキルでチェックし、指摘に対応する",
+      "2つにチェックが付いたら「クライアント報告」へ",
+    ],
   },
   {
     key: "report",
@@ -64,6 +68,8 @@ export type KessanCard = {
   paid_local: boolean;
   data_sent: boolean;
   bound_mailed: boolean;
+  review_freee_ai: boolean;
+  review_self: boolean;
   completed_at: string | null;
   created_at: string;
   updated_at: string;
@@ -92,6 +98,38 @@ export const BINDING_FIELDS = [
 ] as const;
 
 export type BindingField = (typeof BINDING_FIELDS)[number]["key"];
+
+export const REVIEW_FIELDS = [
+  { key: "review_freee_ai", label: "freee AIエージェントの申告書チェック" },
+  { key: "review_self", label: "kessan-self-review" },
+] as const;
+
+export type ReviewField = (typeof REVIEW_FIELDS)[number]["key"];
+
+export function reviewDoneCount(card: Pick<KessanCard, ReviewField>): number {
+  return REVIEW_FIELDS.filter((f) => card[f.key]).length;
+}
+
+export function reviewDone(card: Pick<KessanCard, ReviewField>): boolean {
+  return reviewDoneCount(card) === REVIEW_FIELDS.length;
+}
+
+/**
+ * 社内レビューより後ろの工程へ進めてよいか。
+ * 社内レビュー以前（未着手〜社内レビュー）から、クライアント報告以降へ移すときは
+ * レビューの2つのチェックが必要。
+ */
+export function blockedByReview(
+  card: Pick<KessanCard, "stage" | ReviewField>,
+  target: KessanStage
+): boolean {
+  const reviewIdx = KESSAN_STAGE_KEYS.indexOf("review");
+  return (
+    KESSAN_STAGE_KEYS.indexOf(card.stage) <= reviewIdx &&
+    KESSAN_STAGE_KEYS.indexOf(target) > reviewIdx &&
+    !reviewDone(card)
+  );
+}
 
 /** 完了に必要なチェック（製本・送付2つ＋納付確認3つ） */
 export const COMPLETION_FIELDS = [...BINDING_FIELDS, ...PAID_FIELDS] as const;
