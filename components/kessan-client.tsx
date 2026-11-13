@@ -12,6 +12,7 @@ import {
   KESSAN_STAGES,
   KESSAN_STAGE_KEYS,
   remainingChecks,
+  canComplete,
   filingDeadline,
   periodLabel,
   previousMonthJST,
@@ -28,7 +29,6 @@ type Toast = { id: number; message: string; kind: "error" | "info" };
 
 export function KessanClient({ initialCards }: Props) {
   const [cards, setCards] = useState<KessanCard[]>(initialCards);
-  const [showDone, setShowDone] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [seedMonth, setSeedMonth] = useState(() => {
     const { year, month } = previousMonthJST();
@@ -78,7 +78,8 @@ export function KessanClient({ initialCards }: Props) {
     (card: KessanCard, delta: number) => {
       const idx = KESSAN_STAGE_KEYS.indexOf(card.stage);
       const nextStage = KESSAN_STAGE_KEYS[idx + delta];
-      if (!nextStage || nextStage === "done") return; // 完了はシートの「完了にする」から
+      if (!nextStage) return;
+      if (nextStage === "done" && !canComplete(card)) return; // 製本→完了は5つのチェックが揃ったときだけ
       patchCard(card, { stage: nextStage }, { stage: nextStage });
     },
     [patchCard]
@@ -110,16 +111,15 @@ export function KessanClient({ initialCards }: Props) {
   }, [seedMonth, reload, showToast]);
 
   const columns = useMemo(() => {
-    const keys: KessanStage[] = [...KESSAN_STAGES.map((s) => s.key), ...(showDone ? (["done"] as const) : [])];
+    const keys: KessanStage[] = [...KESSAN_STAGES.map((s) => s.key), "done"];
     return keys.map((key) => ({
       key,
       label: key === "done" ? "完了" : KESSAN_STAGES.find((s) => s.key === key)!.label,
       hint: key === "done" ? "直近90日" : KESSAN_STAGES.find((s) => s.key === key)!.hint,
       cards: cards.filter((c) => c.stage === key),
     }));
-  }, [cards, showDone]);
+  }, [cards]);
 
-  const doneCount = cards.filter((c) => c.stage === "done").length;
   const selectedCard = cards.find((c) => c.id === selectedId) ?? null;
 
   return (
@@ -142,12 +142,6 @@ export function KessanClient({ initialCards }: Props) {
             <Button size="sm" variant="outline" onClick={handleSeed} disabled={seeding}>
               <Plus className="size-3.5" />
               未着手に投入
-            </Button>
-          </div>
-
-          <div className="flex items-center">
-            <Button size="sm" variant="ghost" onClick={() => setShowDone((v) => !v)}>
-              {showDone ? "完了を隠す" : `完了を表示（${doneCount}）`}
             </Button>
           </div>
 
@@ -305,7 +299,7 @@ function BoardCard({
               variant="ghost"
               size="icon-xs"
               onClick={() => onMove(1)}
-              disabled={card.stage === "binding"}
+              disabled={card.stage === "binding" && !canComplete(card)}
               aria-label="次の列へ"
             >
               <ChevronRight />
