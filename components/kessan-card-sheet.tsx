@@ -10,6 +10,7 @@ import { apiFetch } from "@/lib/api-fetch";
 import { cn } from "@/lib/utils";
 import {
   KESSAN_STAGES,
+  BINDING_FIELDS,
   PAID_FIELDS,
   canComplete,
   filingDeadline,
@@ -177,6 +178,24 @@ export function KessanCardSheet({ card, onOpenChange, onPatch, onCommentAdded, o
                 </label>
               </section>
 
+              {/* 製本・送付 */}
+              <section>
+                <h3 className="text-xs font-semibold text-muted-foreground mb-2">製本・送付</h3>
+                <div className="flex items-center gap-4">
+                  {BINDING_FIELDS.map((f) => (
+                    <label key={f.key} className="flex items-center gap-1.5 text-sm cursor-pointer">
+                      <Checkbox
+                        checked={card[f.key]}
+                        onCheckedChange={(checked) =>
+                          onPatch(card, { [f.key]: checked === true }, { [f.key]: checked === true })
+                        }
+                      />
+                      {f.label}
+                    </label>
+                  ))}
+                </div>
+              </section>
+
               {/* 納付確認・完了 */}
               <section>
                 <h3 className="text-xs font-semibold text-muted-foreground mb-2">納付確認</h3>
@@ -213,7 +232,7 @@ export function KessanCardSheet({ card, onOpenChange, onPatch, onCommentAdded, o
                   )}
                   {card.stage !== "done" && !canComplete(card) && (
                     <p className="text-[11px] text-muted-foreground mt-1.5">
-                      製本列にあり、納付チェックが3つ揃うと完了にできます。
+                      製本列にあり、データ送付・製本郵送・納付確認3つの5つが揃うと完了にできます。
                     </p>
                   )}
                 </div>

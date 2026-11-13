@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 import {
   KESSAN_STAGES,
   KESSAN_STAGE_KEYS,
-  allPaid,
+  remainingChecks,
   filingDeadline,
   periodLabel,
   previousMonthJST,
@@ -281,12 +281,12 @@ function BoardCard({
           <span
             className={cn(
               "rounded px-1.5 py-0.5 text-[11px] ring-1",
-              allPaid(card)
+              remainingChecks(card) === 0
                 ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
                 : "bg-muted text-muted-foreground ring-border"
             )}
           >
-            納付 {[card.paid_corporate, card.paid_consumption, card.paid_local].filter(Boolean).length}/3
+            {remainingChecks(card) === 0 ? "完了できます" : `残り${remainingChecks(card)}`}
           </span>
         )}
         <div className="flex-1" />

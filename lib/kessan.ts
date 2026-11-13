@@ -32,6 +32,8 @@ export type KessanCard = {
   paid_corporate: boolean;
   paid_consumption: boolean;
   paid_local: boolean;
+  data_sent: boolean;
+  bound_mailed: boolean;
   completed_at: string | null;
   created_at: string;
   updated_at: string;
@@ -53,6 +55,16 @@ export const PAID_FIELDS = [
 ] as const;
 
 export type PaidField = (typeof PAID_FIELDS)[number]["key"];
+
+export const BINDING_FIELDS = [
+  { key: "data_sent", label: "データ送付" },
+  { key: "bound_mailed", label: "製本郵送" },
+] as const;
+
+export type BindingField = (typeof BINDING_FIELDS)[number]["key"];
+
+/** 完了に必要なチェック（製本・送付2つ＋納付確認3つ） */
+export const COMPLETION_FIELDS = [...BINDING_FIELDS, ...PAID_FIELDS] as const;
 
 /** 決算月の末日（YYYY-MM-DD） */
 export function periodEndOf(year: number, month: number): string {
@@ -86,8 +98,13 @@ export function allPaid(card: Pick<KessanCard, PaidField>): boolean {
   return card.paid_corporate && card.paid_consumption && card.paid_local;
 }
 
+/** 完了までに残っているチェックの数 */
+export function remainingChecks(card: Pick<KessanCard, PaidField | BindingField>): number {
+  return COMPLETION_FIELDS.filter((f) => !card[f.key]).length;
+}
+
 export function canComplete(card: KessanCard): boolean {
-  return card.stage === "binding" && allPaid(card);
+  return card.stage === "binding" && remainingChecks(card) === 0;
 }
 
 /** 日本時間の今日から見た「前月」（決算月として投入する初期値） */
