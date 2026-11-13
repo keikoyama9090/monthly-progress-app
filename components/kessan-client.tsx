@@ -166,24 +166,11 @@ export function KessanClient({ initialCards }: Props) {
       </header>
 
       <main className="flex-1 min-h-0 w-full overflow-x-auto">
-        <div className="px-6 py-5 h-full flex gap-3 items-start">
-          {columns.map((col) =>
-            col.cards.length === 0 ? (
-              // カードのない列は細く折りたたむ
+        <div className="px-6 py-5 h-full min-w-[1360px] grid grid-cols-7 gap-3 items-start">
+          {columns.map((col) => (
               <section
                 key={col.key}
-                title={`${col.label}：${col.hint}`}
-                className="w-11 shrink-0 self-stretch flex flex-col items-center gap-2 rounded-lg bg-muted/40 border border-dashed border-border pt-3"
-              >
-                <span className="text-xs text-muted-foreground tabular-nums">0</span>
-                <span className="text-xs font-medium text-muted-foreground [writing-mode:vertical-rl] tracking-widest">
-                  {col.label}
-                </span>
-              </section>
-            ) : (
-              <section
-                key={col.key}
-                className="flex-1 min-w-[200px] max-w-[300px] max-h-full flex flex-col rounded-lg bg-muted/50 border border-border"
+                className="min-w-0 max-h-full flex flex-col rounded-lg bg-muted/50 border border-border"
               >
                 <div className="px-3 pt-3 pb-2 shrink-0">
                   <div className="flex items-center gap-1.5">
@@ -225,10 +212,12 @@ export function KessanClient({ initialCards }: Props) {
                       }}
                     />
                   ))}
+                  {col.cards.length === 0 && (
+                    <p className="text-xs text-muted-foreground text-center py-4">なし</p>
+                  )}
                 </div>
               </section>
-            )
-          )}
+          ))}
         </div>
       </main>
 
